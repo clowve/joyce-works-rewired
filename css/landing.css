@@ -1,0 +1,262 @@
+/* ==========================================================================
+   JOYCE.WORKS — REWIRED
+   Staging foundation
+
+   Rule #1:
+   Persistent site chrome stays independent from landing animation.
+   ========================================================================== */
+
+:root {
+  --jw-pink: #f55a93;
+  --jw-black: #0c070a;
+  --jw-offwhite: #f7f7f7;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--jw-black);
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+
+  background: var(--jw-black);
+  color: #fff;
+
+  font-family:
+    "Helvetica Neue",
+    "HelveticaNeue",
+    Helvetica,
+    Arial,
+    sans-serif;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body,
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+}
+
+/* ==========================================================================
+   Persistent menu
+   Rebuilt from the existing Joyce Works placement and behaviour.
+   ========================================================================== */
+
+.site-menu-toggle {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+}
+
+.site-menu-panel {
+  position: fixed;
+  z-index: 105;
+
+  top: 0;
+  left: 0;
+
+  width: 300px;
+  height: 100dvh;
+
+  overflow-y: auto;
+
+  background: #000;
+  color: #fff;
+
+  transform: translateX(-100%);
+  transition: transform 200ms ease-in-out;
+}
+
+.site-menu-panel h3 {
+  margin: 0;
+  padding: 0;
+
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 25px;
+  letter-spacing: 2px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.site-menu-panel ul {
+  margin: 10px 20px;
+  padding: 0;
+
+  list-style: none;
+
+  font-size: 14px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.site-menu-panel li {
+  margin: 15px 0;
+}
+
+.site-menu-panel a {
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 200ms ease;
+}
+
+.site-menu-panel a:hover,
+.site-menu-panel a:focus-visible {
+  border-bottom-color: #fff;
+}
+
+.site-menu-button {
+  position: fixed;
+  z-index: 110;
+
+  top: 10px;
+  left: 10px;
+
+  width: 35px;
+  height: 35px;
+
+  margin: 0;
+  padding: 0;
+
+  display: grid;
+  place-items: center;
+
+  border: 0;
+  background: rgba(0, 0, 0, 0.3);
+
+  cursor: pointer;
+
+  transition: background 200ms ease;
+}
+
+.site-menu-button:hover {
+  background: #000;
+}
+
+.site-menu-button span,
+.site-menu-button span::before,
+.site-menu-button span::after {
+  display: block;
+
+  width: 16px;
+  height: 2px;
+
+  background: #fff;
+}
+
+.site-menu-button span {
+  position: relative;
+}
+
+.site-menu-button span::before,
+.site-menu-button span::after {
+  content: "";
+
+  position: absolute;
+  left: 0;
+
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease;
+}
+
+.site-menu-button span::before {
+  top: -5px;
+}
+
+.site-menu-button span::after {
+  top: 5px;
+}
+
+.site-menu-toggle:checked ~ .site-menu-panel {
+  transform: translateX(0);
+}
+
+.site-menu-toggle:checked ~ .site-menu-button span::before,
+.site-menu-toggle:checked ~ .site-menu-button span::after {
+  opacity: 0;
+}
+
+/* ==========================================================================
+   Landing foundation
+   ========================================================================== */
+
+#landing-v2 {
+  position: relative;
+  width: 100%;
+}
+
+.landing-scene {
+  position: relative;
+  width: 100%;
+  min-height: 100dvh;
+}
+
+.identity-scene {
+  min-height: 100dvh;
+  background: var(--jw-black);
+}
+
+.identity-stage {
+  position: relative;
+
+  width: 100%;
+  height: 100dvh;
+
+  display: grid;
+  place-items: center;
+
+  overflow: clip;
+}
+
+.staging-marker {
+  margin: 0;
+
+  color: var(--jw-pink);
+
+  font-size: clamp(20px, 2vw, 34px);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-align: center;
+}
+
+.disciplines-scene {
+  background: var(--jw-offwhite);
+}
+
+.clients-scene {
+  background: var(--jw-black);
+}
+
+.cta-scene {
+  background: var(--jw-pink);
+}
+
+/* ==========================================================================
+   Accessibility / motion
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
