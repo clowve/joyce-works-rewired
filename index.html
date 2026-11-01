@@ -89,8 +89,10 @@
           This slides up over the opening as the user scrolls.
         -->
         <div
-          class="identity-wipe"
+          class="identity-wipe identity-wipe--wordmark"
           data-identity-wipe
+          data-wipe-start="0"
+          data-wipe-end="0.5"
           aria-hidden="true"
         >
           <div
@@ -102,6 +104,24 @@
               src="assets/identity/joyce-works-mark.svg"
               alt="Joyce Works"
             >
+          </div>
+        </div>
+
+        <!--
+          State 3:
+          native pink field + the canonical JOYCE WORKS SVG used as
+          a mask. The old composed JPEG is only a temporary portrait
+          calibration source and will be replaced by the clean photo.
+        -->
+        <div
+          class="identity-wipe identity-wipe--portrait"
+          data-identity-wipe
+          data-wipe-start="0.5"
+          data-wipe-end="1"
+          aria-hidden="true"
+        >
+          <div class="identity-wipe-content identity-portrait-state">
+            <div class="identity-portrait-mask"></div>
           </div>
         </div>
 
