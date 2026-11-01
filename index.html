@@ -11,6 +11,13 @@
     content="Staging rebuild of the Joyce Works landing experience."
   >
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Anton&display=swap"
+    rel="stylesheet"
+  >
+
   <link rel="stylesheet" href="css/landing.css">
 </head>
 
@@ -70,11 +77,34 @@
       id="identity"
       class="landing-scene identity-scene"
       aria-label="Joyce Works introduction"
+      data-identity-scene
     >
       <div class="identity-stage">
-        <p class="staging-marker">
-          JOYCE.WORKS / REWIRED
-        </p>
+
+        <!--
+          Temporary reference layer:
+          keep the original animated opening while we rebuild
+          the visual system underneath it piece by piece.
+        -->
+        <div
+          class="identity-layer identity-opening"
+          aria-hidden="true"
+        ></div>
+
+        <!--
+          First genuinely web-native state.
+          This slides up over the opening as the user scrolls.
+        -->
+        <div
+          class="identity-layer identity-wordmark-state"
+          data-identity-wordmark-state
+        >
+          <div class="jw-mark" aria-label="Joyce Works">
+            <span class="jw-mark-joyce">JOYCE</span>
+            <span class="jw-mark-works">WORKS</span>
+          </div>
+        </div>
+
       </div>
     </section>
 
