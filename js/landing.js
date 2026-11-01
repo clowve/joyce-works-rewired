@@ -35,9 +35,12 @@
   /* -----------------------------------------------------------------------
      Scene A — identity
 
-     The scene is 200dvh tall.
-     Its stage remains sticky for 100dvh while the second state
-     travels from 100% below the viewport to its resting position.
+     The stage stays sticky while multiple stationary states are
+     revealed by moving only their clipping edges.
+
+     Each wipe declares its own start/end point across the scene:
+     0.00 → 0.50 : psychedelic → black/pink wordmark
+     0.50 → 1.00 : black/pink wordmark → portrait mask
 
      This recreates the old card-to-card reveal without:
      - duplicate .gap elements
@@ -49,17 +52,12 @@
   var identityScene =
     document.querySelector("[data-identity-scene]");
 
-  var identityWipe =
-    document.querySelector("[data-identity-wipe]");
+  var identityWipes =
+    Array.prototype.slice.call(
+      document.querySelectorAll("[data-identity-wipe]")
+    );
 
-  var identityWipeContent =
-    document.querySelector("[data-identity-wipe-content]");
-
-  if (
-    !identityScene ||
-    !identityWipe ||
-    !identityWipeContent
-  ) return;
+  if (!identityScene || !identityWipes.length) return;
 
   var identityFrame = null;
 
@@ -79,17 +77,25 @@
     var progress =
       clamp01((-rect.top) / scrollDistance);
 
-    var hiddenFromTop =
-      (1 - progress) * 100;
+    identityWipes.forEach(function (wipe) {
+      var start =
+        parseFloat(wipe.getAttribute("data-wipe-start")) || 0;
 
-    var clipValue =
-      "inset(" + hiddenFromTop + "% 0 0 0)";
+      var end =
+        parseFloat(wipe.getAttribute("data-wipe-end")) || 1;
 
-    identityWipe.style.webkitClipPath =
-      clipValue;
+      var localProgress =
+        clamp01((progress - start) / Math.max(0.0001, end - start));
 
-    identityWipe.style.clipPath =
-      clipValue;
+      var hiddenFromTop =
+        (1 - localProgress) * 100;
+
+      var clipValue =
+        "inset(" + hiddenFromTop + "% 0 0 0)";
+
+      wipe.style.webkitClipPath = clipValue;
+      wipe.style.clipPath = clipValue;
+    });
   }
 
   function requestIdentityRender() {
