@@ -299,34 +299,16 @@ a {
 }
 
 .identity-portrait-state {
-  background: var(--jw-pink);
-}
-
-.identity-portrait-mask {
-  position: absolute;
-  inset: 0;
-
+  background-color: var(--jw-pink);
   background-image:
     url("https://www.dropbox.com/s/wo8y9p5ft5ys7w8/landing02-2274x1080-2.jpg?raw=1");
   background-position: center center;
   background-repeat: no-repeat;
-  background-size: cover;
+  background-size: contain;
+}
 
-  -webkit-mask-image:
-    url("../assets/identity/joyce-works-mark.svg");
-  mask-image:
-    url("../assets/identity/joyce-works-mark.svg");
-
-  -webkit-mask-position: center center;
-  mask-position: center center;
-
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-
-  -webkit-mask-size: min(790px, 42vw) auto;
-  mask-size: min(790px, 42vw) auto;
-
-  mask-mode: alpha;
+.identity-portrait-mask {
+  display: none;
 }
 
 .jw-mark {
@@ -344,10 +326,6 @@ a {
     width: min(78vw, 520px);
   }
 
-  .identity-portrait-mask {
-    -webkit-mask-size: min(78vw, 520px) auto;
-    mask-size: min(78vw, 520px) auto;
-  }
 }
 
 .disciplines-scene {
