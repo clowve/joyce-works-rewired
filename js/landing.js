@@ -79,17 +79,17 @@
     var progress =
       clamp01((-rect.top) / scrollDistance);
 
-    var maskTranslateY =
+    var hiddenFromTop =
       (1 - progress) * 100;
 
-    var contentTranslateY =
-      -maskTranslateY;
+    var clipValue =
+      "inset(" + hiddenFromTop + "% 0 0 0)";
 
-    identityWipe.style.transform =
-      "translate3d(0, " + maskTranslateY + "%, 0)";
+    identityWipe.style.webkitClipPath =
+      clipValue;
 
-    identityWipeContent.style.transform =
-      "translate3d(0, " + contentTranslateY + "%, 0)";
+    identityWipe.style.clipPath =
+      clipValue;
   }
 
   function requestIdentityRender() {
