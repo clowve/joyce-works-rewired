@@ -49,10 +49,17 @@
   var identityScene =
     document.querySelector("[data-identity-scene]");
 
-  var identityWordmarkState =
-    document.querySelector("[data-identity-wordmark-state]");
+  var identityWipe =
+    document.querySelector("[data-identity-wipe]");
 
-  if (!identityScene || !identityWordmarkState) return;
+  var identityWipeContent =
+    document.querySelector("[data-identity-wipe-content]");
+
+  if (
+    !identityScene ||
+    !identityWipe ||
+    !identityWipeContent
+  ) return;
 
   var identityFrame = null;
 
@@ -72,11 +79,17 @@
     var progress =
       clamp01((-rect.top) / scrollDistance);
 
-    var translateY =
+    var maskTranslateY =
       (1 - progress) * 100;
 
-    identityWordmarkState.style.transform =
-      "translate3d(0, " + translateY + "%, 0)";
+    var contentTranslateY =
+      -maskTranslateY;
+
+    identityWipe.style.transform =
+      "translate3d(0, " + maskTranslateY + "%, 0)";
+
+    identityWipeContent.style.transform =
+      "translate3d(0, " + contentTranslateY + "%, 0)";
   }
 
   function requestIdentityRender() {
