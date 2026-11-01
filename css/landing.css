@@ -267,15 +267,16 @@ a {
   width: 100%;
   height: 100%;
 
-  overflow: hidden;
-
   /*
-    The mask starts below the viewport and rises.
-    Its child counter-translates by the exact opposite amount,
-    so the artwork itself appears stationary while being revealed.
+    The artwork never moves.
+    Scroll only changes this clipping edge from bottom to top.
+    That preserves the original "stationary card being revealed"
+    illusion without Skrollr's opposing transforms.
   */
-  transform: translate3d(0, 100%, 0);
-  will-change: transform;
+  -webkit-clip-path: inset(100% 0 0 0);
+  clip-path: inset(100% 0 0 0);
+
+  will-change: clip-path;
 }
 
 .identity-wipe-content {
@@ -284,9 +285,6 @@ a {
 
   width: 100%;
   height: 100%;
-
-  transform: translate3d(0, -100%, 0);
-  will-change: transform;
 }
 
 .identity-wordmark-state {
