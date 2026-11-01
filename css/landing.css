@@ -295,51 +295,18 @@ a {
 }
 
 .jw-mark {
-  width: min(790px, 37vw);
+  display: block;
 
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  color: var(--jw-pink);
-
-  font-family: "Anton", Impact, sans-serif;
-  font-weight: 400;
-  text-transform: uppercase;
+  width: min(790px, 42vw);
+  height: auto;
 
   user-select: none;
-}
-
-.jw-mark span {
-  display: block;
-  white-space: nowrap;
-}
-
-.jw-mark-joyce {
-  font-size: clamp(150px, 15vw, 340px);
-  line-height: 0.92;
-  letter-spacing: -0.035em;
-}
-
-.jw-mark-works {
-  margin-top: 0.02em;
-
-  font-size: clamp(82px, 8.2vw, 186px);
-  line-height: 0.9;
-  letter-spacing: -0.035em;
+  pointer-events: none;
 }
 
 @media (max-width: 740px) {
   .jw-mark {
     width: min(78vw, 520px);
-  }
-
-  .jw-mark-joyce {
-    font-size: clamp(112px, 31vw, 220px);
-  }
-
-  .jw-mark-works {
-    font-size: clamp(62px, 17vw, 122px);
   }
 }
 
