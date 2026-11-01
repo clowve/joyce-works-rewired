@@ -209,11 +209,11 @@ a {
 .identity-scene {
   /*
     One viewport is visible.
-    The second viewport supplies exactly one viewport of scroll
-    for the first wipe/reveal.
+    Two additional viewports supply one viewport of scroll
+    for each stationary wipe/reveal.
   */
-  height: 200dvh;
-  min-height: 200dvh;
+  height: 300dvh;
+  min-height: 300dvh;
 
   background: var(--jw-black);
 }
@@ -294,6 +294,41 @@ a {
   background: var(--jw-black);
 }
 
+.identity-wipe--portrait {
+  z-index: 3;
+}
+
+.identity-portrait-state {
+  background: var(--jw-pink);
+}
+
+.identity-portrait-mask {
+  position: absolute;
+  inset: 0;
+
+  background-image:
+    url("https://www.dropbox.com/s/wo8y9p5ft5ys7w8/landing02-2274x1080-2.jpg?raw=1");
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+
+  -webkit-mask-image:
+    url("../assets/identity/joyce-works-mark.svg");
+  mask-image:
+    url("../assets/identity/joyce-works-mark.svg");
+
+  -webkit-mask-position: center center;
+  mask-position: center center;
+
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+
+  -webkit-mask-size: min(790px, 42vw) auto;
+  mask-size: min(790px, 42vw) auto;
+
+  mask-mode: alpha;
+}
+
 .jw-mark {
   display: block;
 
@@ -307,6 +342,11 @@ a {
 @media (max-width: 740px) {
   .jw-mark {
     width: min(78vw, 520px);
+  }
+
+  .identity-portrait-mask {
+    -webkit-mask-size: min(78vw, 520px) auto;
+    mask-size: min(78vw, 520px) auto;
   }
 }
 
