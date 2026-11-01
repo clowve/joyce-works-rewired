@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>JOYCE.WORKS — Landing Rebuild</title>
+
+  <meta
+    name="description"
+    content="Staging rebuild of the Joyce Works landing experience."
+  >
+
+  <link rel="stylesheet" href="css/landing.css">
+</head>
+
+<body>
+  <!--
+    JOYCE.WORKS — REWIRED
+    GitHub staging shell.
+
+    IMPORTANT:
+    This menu is persistent site chrome. Keep it outside
+    every scroll-driven landing scene.
+
+    Tumblr migration:
+    restore the dynamic {block:HasPages}, Ask and Submit
+    entries only when this staging build is moved home.
+  -->
+  <div class="site-menu">
+    <input
+      class="site-menu-toggle"
+      type="checkbox"
+      id="ShowMenu"
+      aria-label="Toggle menu"
+    >
+
+    <nav id="menu" class="site-menu-panel" aria-label="Site menu">
+      <h3>Menu</h3>
+
+      <ul>
+        <li><a href="#identity">Home</a></li>
+        <li><a href="https://joyce.works/hard">Work</a></li>
+        <li><a href="https://joyce.works/yo">Say hello</a></li>
+      </ul>
+    </nav>
+
+    <label
+      class="site-menu-button"
+      for="ShowMenu"
+      aria-hidden="true"
+    >
+      <span></span>
+    </label>
+  </div>
+
+  <main id="landing-v2">
+    <!--
+      Scene A
+      Identity / reveal.
+
+      Planned states:
+      1. Psychedelic opening
+      2. Stable JOYCE WORKS
+      3. Pink identity state
+      4. Portrait masked into wordmark
+      5. Portrait + biography reveal
+    -->
+    <section
+      id="identity"
+      class="landing-scene identity-scene"
+      aria-label="Joyce Works introduction"
+    >
+      <div class="identity-stage">
+        <p class="staging-marker">
+          JOYCE.WORKS / REWIRED
+        </p>
+      </div>
+    </section>
+
+    <!-- Scene B — Advertising / Strategy / Art -->
+    <section
+      id="disciplines"
+      class="landing-scene disciplines-scene"
+      aria-label="Disciplines"
+    ></section>
+
+    <!-- Scene C — Client history -->
+    <section
+      id="clients"
+      class="landing-scene clients-scene"
+      aria-label="Clients"
+    ></section>
+
+    <!-- Scene D — Portfolio / contact -->
+    <section
+      id="contact"
+      class="landing-scene cta-scene"
+      aria-label="Portfolio and contact"
+    ></section>
+  </main>
+
+  <script src="js/landing.js"></script>
+</body>
+</html>
