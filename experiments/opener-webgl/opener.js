@@ -29,6 +29,7 @@
 
   let paths = [];
   let totalLength = 0;
+  let uniforms = null;
 
   fetch("../../assets/identity/joyce-works-outline.svg?v=20261103-pad1")
     .then(r => r.text())
@@ -82,7 +83,9 @@
     fillMark.style.opacity = String(fillProgress);
     veil.style.opacity = String(veilProgress * 0.98);
 
-    uniforms.scroll = progress;
+    if (uniforms) {
+      uniforms.scroll = progress;
+    }
   }
 
   let scrollRAF = 0;
@@ -330,7 +333,7 @@
     scroll: loc("u_scroll")
   };
 
-  const uniforms = {
+  uniforms = {
     pointerX: 0.5,
     pointerY: 0.5,
     velocityX: 0,
