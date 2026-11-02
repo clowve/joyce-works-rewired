@@ -1,26 +1,15 @@
 
 /* ==========================================================================
-   Scene A → Scene B handoff
+   Scene A → Scene B overlap
 
-   Scene A gains one additional viewport only for the disciplines base wipe.
-   landing.css remains otherwise frozen.
+   Scene A keeps its final black bio card pinned for one extra viewport.
+   Scene B begins two viewports early and its ONE existing stage wipes upward
+   over that held frame. No duplicate handoff card.
    ========================================================================== */
 
 .identity-scene {
   height: 500dvh;
   min-height: 500dvh;
-}
-
-.identity-wipe--disciplines-handoff {
-  z-index: 5;
-}
-
-.identity-disciplines-handoff-state {
-  background: var(--jw-offwhite);
-}
-
-.identity-disciplines-handoff-state .disciplines-artboard {
-  pointer-events: none;
 }
 
 /* ==========================================================================
@@ -32,15 +21,23 @@
    ========================================================================== */
 
 .disciplines-scene {
-  height: 400dvh;
-  min-height: 400dvh;
+  position: relative;
+  z-index: 6;
 
-  background: var(--jw-offwhite);
+  height: 500dvh;
+  min-height: 500dvh;
+
+  /* Begin while Scene A is still pinned on its final frame. */
+  margin-top: -200dvh;
+
+  background: transparent;
 }
 
 .disciplines-stage {
   position: sticky;
   top: 0;
+
+  z-index: 1;
 
   width: 100%;
   height: 100dvh;
@@ -48,6 +45,12 @@
   overflow: hidden;
 
   background: var(--jw-offwhite);
+
+  /* The existing base card itself becomes the transition wipe. */
+  -webkit-clip-path: inset(100% 0 0 0);
+  clip-path: inset(100% 0 0 0);
+
+  will-change: clip-path;
 }
 
 .disciplines-artboard {
