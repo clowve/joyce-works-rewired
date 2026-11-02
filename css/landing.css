@@ -263,7 +263,7 @@ a {
 
   background-color: var(--jw-black);
   background-image:
-    url("https://www.dropbox.com/s/4s0ewczs2laodwr/landing-01-anim-2274x1080.gif?raw=1");
+    url("../assets/identity/landing-opener-placeholder.webp");
 
   background-position: center center;
   background-repeat: no-repeat;
@@ -570,4 +570,22 @@ a {
   */
   -webkit-clip-path: inset(0 0 calc(28.497942387% - 2px) 0);
   clip-path: inset(0 0 calc(28.497942387% - 2px) 0);
+}
+
+
+/* Static opener placeholder + canonical site-wide brand mark. */
+.identity-opening-mark {
+  position: absolute;
+  left: var(--jw-brand-mark-center-x);
+  top: var(--jw-brand-mark-center-y);
+
+  width: var(--jw-brand-mark-width);
+  height: var(--jw-brand-mark-height);
+
+  transform: translate(-50%, -50%);
+
+  object-fit: fill;
+
+  user-select: none;
+  pointer-events: none;
 }
