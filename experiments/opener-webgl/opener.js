@@ -122,10 +122,10 @@
       still resolving.
     */
     const fillProgress =
-      smooth(0.88, 0.995, drawProgress);
+      smooth(0.74, 0.93, drawProgress);
 
     const veilProgress =
-      smooth(0.94, 1.00, progress);
+      smooth(0.91, 1.00, progress);
 
     /*
       JOYCE and WORKS are one identity object. Both compound paths draw
@@ -284,7 +284,7 @@
         ).r;
 
       memory =
-        smoothstep(0.035, 0.72, memory);
+        smoothstep(0.085, 0.76, memory);
 
       /*
         TWO OPPOSING CURRENTS.
@@ -294,30 +294,30 @@
       */
       float currentLeft =
         sin(
-          (uv.x + t * 0.34) * 10.0 +
-          uv.y * 5.6 +
-          sin(uv.y * 8.0 - t * 1.9) * 0.55
+          (uv.x + t * 0.42) * 10.6 +
+          uv.y * 5.8 +
+          sin(uv.y * 8.8 - t * 2.4) * 0.72
         );
 
       float currentRight =
         sin(
-          (uv.x - t * 0.31) * 9.0 -
-          uv.y * 6.2 +
-          cos(uv.y * 7.0 + t * 2.1) * 0.52
+          (uv.x - t * 0.39) * 9.7 -
+          uv.y * 6.5 +
+          cos(uv.y * 7.7 + t * 2.6) * 0.70
         );
 
       vec2 uvLeft =
         uv +
         vec2(
-          currentLeft * 0.029,
-          sin(uv.x * 7.0 + t * 3.05) * 0.0065
+          currentLeft * 0.038,
+          sin(uv.x * 7.8 + t * 3.55) * 0.0080
         );
 
       vec2 uvRight =
         uv +
         vec2(
-          currentRight * -0.028,
-          cos(uv.x * 8.0 - t * 2.85) * 0.0060
+          currentRight * -0.037,
+          cos(uv.x * 8.6 - t * 3.35) * 0.0075
         );
 
       float currentMix =
@@ -526,12 +526,12 @@
         ambient pulses, the live cursor and the persistent wake.
       */
       float chroma =
-        0.0027 +
-        ambientGlitch * 0.0032 +
+        0.0034 +
+        ambientGlitch * 0.0042 +
         cursorInfluence *
-          (0.007 + activeEnergy * 0.021) +
-        memory * 0.013 +
-        artifact * 0.005;
+          (0.010 + activeEnergy * 0.030) +
+        memory * 0.020 +
+        artifact * 0.008;
 
       vec2 chromaDir =
         normalize(
@@ -662,11 +662,15 @@
             0.34
         );
 
+      /*
+        Smear should displace/echo color, not brighten the disturbed area.
+        Blending directly prevents the lingering white cast from V8.
+      */
       color =
         mix(
           color,
-          max(color, smear * 1.17),
-          smearMix
+          smear,
+          smearMix * 0.78
         );
 
       float grain =
@@ -685,7 +689,7 @@
           1.0,
           0.88,
           smoothstep(
-            0.94,
+            0.91,
             1.0,
             u_scroll
           )
@@ -892,7 +896,7 @@
     memoryCtx.globalCompositeOperation =
       "destination-out";
     memoryCtx.fillStyle =
-      "rgba(0,0,0,0.0065)";
+      "rgba(0,0,0,0.018)";
     memoryCtx.fillRect(
       0,
       0,
@@ -930,9 +934,9 @@
 
       const strength =
         Math.min(
-          0.68,
-          0.18 +
-          uniforms.energy * 0.40
+          0.58,
+          0.14 +
+          uniforms.energy * 0.34
         );
 
       memoryCtx.strokeStyle =
@@ -947,9 +951,9 @@
       memoryCtx.lineCap = "round";
       memoryCtx.lineJoin = "round";
       memoryCtx.shadowColor =
-        "rgba(255,255,255,0.72)";
+        "rgba(255,255,255,0.42)";
       memoryCtx.shadowBlur =
-        15 + uniforms.energy * 13;
+        9 + uniforms.energy * 9;
 
       memoryCtx.beginPath();
       memoryCtx.moveTo(
