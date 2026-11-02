@@ -1,3 +1,28 @@
+
+/* ==========================================================================
+   Scene A → Scene B handoff
+
+   Scene A gains one additional viewport only for the disciplines base wipe.
+   landing.css remains otherwise frozen.
+   ========================================================================== */
+
+.identity-scene {
+  height: 500dvh;
+  min-height: 500dvh;
+}
+
+.identity-wipe--disciplines-handoff {
+  z-index: 5;
+}
+
+.identity-disciplines-handoff-state {
+  background: var(--jw-offwhite);
+}
+
+.identity-disciplines-handoff-state .disciplines-artboard {
+  pointer-events: none;
+}
+
 /* ==========================================================================
    Scene B — Advertising / Strategy / Art
 
