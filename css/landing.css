@@ -209,11 +209,11 @@ a {
 .identity-scene {
   /*
     One viewport is visible.
-    Two additional viewports supply one viewport of scroll
+    Three additional viewports supply one viewport of scroll
     for each stationary wipe/reveal.
   */
-  height: 300dvh;
-  min-height: 300dvh;
+  height: 400dvh;
+  min-height: 400dvh;
 
   background: var(--jw-black);
 }
@@ -353,4 +353,24 @@ a {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+
+/* --------------------------------------------------------------------------
+   Scene A — State 4 reference
+   Temporary only: preserves the original finished frame while the
+   white-strip / outline / cutout composition is rebuilt natively.
+   -------------------------------------------------------------------------- */
+
+.identity-wipe--bio-reference {
+  z-index: 4;
+}
+
+.identity-bio-reference-state {
+  background-color: var(--jw-black);
+  background-image:
+    url("https://www.dropbox.com/s/h7fa9zbs23c2o5g/landing-02-static.jpg?raw=1");
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: contain;
 }
