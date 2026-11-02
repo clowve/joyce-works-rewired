@@ -40,7 +40,45 @@
       svg.removeAttribute("aria-labelledby");
       svg.querySelectorAll("title").forEach(node => node.remove());
 
-      drawHost.replaceChildren(document.importNode(svg, true));
+      const importedSvg = document.importNode(svg, true);
+
+      /*
+        The canonical logo uses compound paths. Stroke dashes restart at
+        each subpath, which can make the mark LOOK finished long before
+        numeric progress reaches 1. Split every M... contour into its own
+        path so all visible contours truly share one slow progression.
+      */
+      Array.from(importedSvg.querySelectorAll("path")).forEach(sourcePath => {
+        const d = sourcePath.getAttribute("d") || "";
+        const contours = d
+          .split(/(?=[Mm])/)
+          .map(part => part.trim())
+          .filter(Boolean);
+
+        if (contours.length <= 1) return;
+
+        const parent = sourcePath.parentNode;
+
+        contours.forEach(contour => {
+          const child = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "path"
+          );
+
+          for (const attr of sourcePath.attributes) {
+            if (attr.name !== "d" && attr.name !== "id") {
+              child.setAttribute(attr.name, attr.value);
+            }
+          }
+
+          child.setAttribute("d", contour);
+          parent.insertBefore(child, sourcePath);
+        });
+
+        sourcePath.remove();
+      });
+
+      drawHost.replaceChildren(importedSvg);
       paths = Array.from(drawHost.querySelectorAll("path"));
 
       paths.forEach(path => {
@@ -63,18 +101,31 @@
     const progress = clamp01(-rect.top / distance);
 
     const drawLinear =
-      clamp01((progress - 0.03) / (0.965 - 0.03));
+      clamp01((progress - 0.02) / (0.975 - 0.02));
 
     /*
-      Physical scroll distance is ~4× longer in V7. Keep the trace
-      mostly even, then gently decelerate near completion instead of
-      stalling first and rushing later.
+      Nearly even speed all the way through, with only a modest
+      deceleration near the end. The long physical scroll distance does
+      the heavy lifting; the easing should never create a late sprint.
     */
     const drawProgress =
-      1 - Math.pow(1 - drawLinear, 1.35);
+      clamp01(
+        (
+          drawLinear -
+          0.12 * drawLinear * drawLinear
+        ) / 0.88
+      );
 
-    const fillProgress = smooth(0.86, 0.975, progress);
-    const veilProgress = smooth(0.92, 1.00, progress);
+    /*
+      Tie the fill to the REAL trace progression so there is no giant
+      fully-outlined waiting state. It begins as the final contours are
+      still resolving.
+    */
+    const fillProgress =
+      smooth(0.88, 0.995, drawProgress);
+
+    const veilProgress =
+      smooth(0.94, 1.00, progress);
 
     /*
       JOYCE and WORKS are one identity object. Both compound paths draw
@@ -258,15 +309,15 @@
       vec2 uvLeft =
         uv +
         vec2(
-          currentLeft * 0.019,
-          sin(uv.x * 7.0 + t * 2.55) * 0.0045
+          currentLeft * 0.029,
+          sin(uv.x * 7.0 + t * 3.05) * 0.0065
         );
 
       vec2 uvRight =
         uv +
         vec2(
-          currentRight * -0.018,
-          cos(uv.x * 8.0 - t * 2.35) * 0.0040
+          currentRight * -0.028,
+          cos(uv.x * 8.0 - t * 2.85) * 0.0060
         );
 
       float currentMix =
@@ -320,51 +371,80 @@
         );
 
       /*
-        Geometric signal artifacts:
-        thin horizontal/diagonal regions only determine where SOURCE
-        PIXELS get displaced. Nothing is painted white on top.
+        Signal artifacts now use rectangular source regions and scanline
+        fragments instead of diagonal crosshatching. These masks NEVER
+        draw visible geometry; they only decide which source pixels get
+        displaced/refracted.
       */
-      float lineA =
+      vec2 blockGrid =
+        floor(
+          vec2(
+            uv.x * 22.0,
+            uv.y * 30.0
+          )
+        );
+
+      float blockSeed =
+        hash21(blockGrid + 19.7);
+
+      float blockPulse =
+        0.5 +
+        0.5 *
+        sin(
+          t * (4.6 + blockSeed * 2.8) +
+          blockSeed * 6.28318
+        );
+
+      float blockMask =
+        smoothstep(
+          0.78,
+          0.94,
+          blockPulse
+        ) *
+        step(
+          0.58,
+          blockSeed
+        );
+
+      float scanLine =
         pow(
           abs(
             sin(
-              uv.y * 72.0 +
-              uv.x * 5.5 +
-              t * 4.4
+              uv.y * 118.0 +
+              t * 7.1
             )
           ),
-          24.0
+          34.0
         );
 
-      float lineB =
-        pow(
-          abs(
-            sin(
-              (uv.y - uv.x * 0.31) * 58.0 -
-              t * 5.1 +
-              1.4
-            )
-          ),
-          28.0
+      float shortLineGate =
+        smoothstep(
+          0.52,
+          0.94,
+          0.5 +
+          0.5 *
+          sin(
+            uv.x * 19.0 -
+            t * 4.3 +
+            hash11(
+              floor(uv.y * 22.0)
+            ) * 6.28318
+          )
         );
 
-      float lineC =
-        pow(
-          abs(
-            sin(
-              (uv.y + uv.x * 0.22) * 43.0 +
-              t * 3.7 +
-              2.6
-            )
-          ),
-          30.0
-        );
+      float lineFragment =
+        scanLine *
+        shortLineGate;
 
+      /*
+        Ambient glitches remain broad signal shears; the cursor gets a
+        more recognisable square/line glitch vocabulary.
+      */
       float ambientArtifact =
         clamp(
-          lineA * glitchA * 0.56 +
-          lineB * glitchB * 0.48 +
-          lineC * glitchC * 0.40,
+          glitchA * lineFragment * 0.42 +
+          glitchB * blockMask * 0.24 +
+          glitchC * scanLine * 0.22,
           0.0,
           1.0
         );
@@ -372,8 +452,10 @@
       float liveArtifact =
         cursorInfluence *
         clamp(
-          lineA * (0.42 + activeEnergy * 0.78) +
-          lineB * (0.28 + activeEnergy * 0.60),
+          blockMask *
+            (0.58 + activeEnergy * 0.68) +
+          lineFragment *
+            (0.52 + activeEnergy * 0.74),
           0.0,
           1.0
         );
@@ -381,9 +463,8 @@
       float memoryArtifact =
         memory *
         clamp(
-          lineB * 0.72 +
-          lineC * 0.54 +
-          lineA * 0.32,
+          blockMask * 0.68 +
+          lineFragment * 0.62,
           0.0,
           1.0
         );
@@ -604,7 +685,7 @@
           1.0,
           0.88,
           smoothstep(
-            0.92,
+            0.94,
             1.0,
             u_scroll
           )
@@ -811,7 +892,7 @@
     memoryCtx.globalCompositeOperation =
       "destination-out";
     memoryCtx.fillStyle =
-      "rgba(0,0,0,0.0032)";
+      "rgba(0,0,0,0.0065)";
     memoryCtx.fillRect(
       0,
       0,
@@ -842,19 +923,16 @@
         uniforms.pointerY - lastMemoryY
       );
 
-    if (
-      motion > 0.00015 ||
-      uniforms.energy > 0.08
-    ) {
+    if (motion > 0.00012) {
       memoryCtx.save();
       memoryCtx.globalCompositeOperation =
         "source-over";
 
       const strength =
         Math.min(
-          0.82,
-          0.22 +
-          uniforms.energy * 0.50
+          0.68,
+          0.18 +
+          uniforms.energy * 0.40
         );
 
       memoryCtx.strokeStyle =
