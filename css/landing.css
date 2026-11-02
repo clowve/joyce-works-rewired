@@ -323,7 +323,21 @@ a {
   left: 50%;
   top: 50%;
 
-  width: max(100vw, calc(100dvh * var(--artboard-ratio)));
+  /*
+    Keep the registered composition responsive, but cap its growth so
+    the JOYCE WORKS mark stays in the same visual scale family as the
+    marks used in Scenes B/C/D.
+
+    The mark occupies 41.162109375% of this plane, so this artboard cap
+    yields a mark around 44vw / 92dvh instead of letting "cover" scale it
+    disproportionately on tall windows.
+  */
+  width: min(
+    106.9vw,
+    calc(223.5dvh * var(--artboard-ratio) / 2.1069958848)
+  );
+  max-width: none;
+
   aspect-ratio: 2048 / 972;
 
   transform: translate(-50%, -50%);
