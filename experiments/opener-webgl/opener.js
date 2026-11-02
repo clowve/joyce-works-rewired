@@ -493,7 +493,7 @@
 
       outColor = vec4(color, 1.0);
     }
-  `
+  `;
 
   function compile(type, source) {
     const shader = gl.createShader(type);
