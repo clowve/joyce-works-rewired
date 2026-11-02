@@ -16,6 +16,16 @@
     Width is controlled by whichever viewport dimension is tighter.
   */
   --jw-brand-mark-width: min(43.8vw, 92dvh);
+  --jw-brand-mark-height: min(33.9801vw, 71.3737dvh);
+
+  /*
+    Outline SVGs carry a tiny transparent safety margin so strokes
+    cannot clip at O/S extrema. These are the corresponding canvas sizes;
+    the visible path still resolves to the canonical width/height above.
+  */
+  --jw-outline-canvas-width: min(44.0748vw, 92.5772dvh);
+  --jw-outline-canvas-height: min(34.2614vw, 71.9646dvh);
+
   --jw-brand-mark-center-x: 50%;
   --jw-brand-mark-center-y: 50%;
 }
@@ -510,10 +520,20 @@ a {
 .identity-outline-mark {
   z-index: 3;
 
+  /*
+    The outline SVG gets a 3-unit safety pad on every side. Expand its
+    image canvas by the inverse amount so the visible path still lands
+    exactly on the photo-mask geometry.
+  */
+  left: 29.704866169%;
+  top: 17.416954332%;
+  width: 41.420345787%;
+  height: 67.840988455%;
+
   object-fit: fill;
 
-  -webkit-clip-path: inset(23.70030581% 0 20.03058104% 0);
-  clip-path: inset(23.70030581% 0 20.03058104% 0);
+  -webkit-clip-path: inset(23.916250848% 0 20.276657943% 0);
+  clip-path: inset(23.916250848% 0 20.276657943% 0);
 
   user-select: none;
 }
@@ -548,6 +568,6 @@ a {
     (695 / 972 of the shared artboard). Below this edge, the portrait
     is visible only through the underlying JOYCE WORKS photo mask.
   */
-  -webkit-clip-path: inset(0 0 28.497942387% 0);
-  clip-path: inset(0 0 28.497942387% 0);
+  -webkit-clip-path: inset(0 0 calc(28.497942387% - 2px) 0);
+  clip-path: inset(0 0 calc(28.497942387% - 2px) 0);
 }
