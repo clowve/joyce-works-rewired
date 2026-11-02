@@ -12,7 +12,7 @@
   >
 
   <link rel="stylesheet" href="css/landing.css?v=20261102-scenea-lock1">
-  <link rel="stylesheet" href="css/scene-b.css?v=20261102-handoff1">
+  <link rel="stylesheet" href="css/scene-b.css?v=20261102-overlap1">
 </head>
 
 <body>
@@ -179,38 +179,6 @@
           </div>
         </div>
 
-        <!--
-          Scene B handoff:
-          reveal the disciplines base as one more stationary Scene A wipe.
-          Scene B then begins on the exact same pixels, so the section
-          boundary itself becomes visually invisible.
-        -->
-        <div
-          class="identity-wipe identity-wipe--disciplines-handoff"
-          data-identity-wipe
-          data-wipe-start="0.75"
-          data-wipe-end="1"
-          aria-hidden="true"
-        >
-          <div class="identity-wipe-content identity-disciplines-handoff-state">
-            <div class="disciplines-artboard">
-              <aside class="discipline-rail" aria-hidden="true">
-                <img
-                  src="assets/identity/discipline-rail.svg"
-                  alt=""
-                >
-              </aside>
-
-              <div class="disciplines-base" aria-hidden="true">
-                <img
-                  class="disciplines-outline-mark"
-                  src="assets/identity/joyce-works-outline.svg"
-                  alt=""
-                >
-              </div>
-            </div>
-          </div>
-        </div>
 
       </div>
     </section>
@@ -243,8 +211,8 @@
           <article
             class="discipline-panel discipline-panel--advertising"
             data-disciplines-wipe
-            data-wipe-start="0"
-            data-wipe-end="0.333333"
+            data-wipe-start="0.25"
+            data-wipe-end="0.5"
           >
             <div class="discipline-orb" aria-hidden="true"></div>
             <div class="discipline-wave" aria-hidden="true"></div>
@@ -278,7 +246,7 @@
             class="discipline-panel discipline-panel--strategy"
             data-disciplines-wipe
             data-wipe-start="0.333333"
-            data-wipe-end="0.666667"
+            data-wipe-end="0.75"
           >
             <div class="discipline-triangle" aria-hidden="true"></div>
             <div class="discipline-wave" aria-hidden="true"></div>
@@ -310,7 +278,7 @@
           <article
             class="discipline-panel discipline-panel--art"
             data-disciplines-wipe
-            data-wipe-start="0.666667"
+            data-wipe-start="0.5"
             data-wipe-end="1"
           >
             <div class="discipline-diamond" aria-hidden="true"></div>
@@ -363,6 +331,6 @@
 
   <script src="js/staging-reset.js?v=20261102-1"></script>
   <script src="js/landing.js?v=20261102-scenea-lock1"></script>
-  <script src="js/scene-b.js?v=20261102-handoff1"></script>
+  <script src="js/scene-b.js?v=20261102-overlap1"></script>
 </body>
 </html>
