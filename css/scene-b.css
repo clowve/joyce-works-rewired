@@ -24,8 +24,8 @@
   position: relative;
   z-index: 6;
 
-  height: 500dvh;
-  min-height: 500dvh;
+  height: 600dvh;
+  min-height: 600dvh;
 
   /* Begin while Scene A is still pinned on its final frame. */
   margin-top: -200dvh;
