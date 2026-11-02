@@ -125,7 +125,7 @@
   left: 47.3%;
   top: 51.4%;
 
-  width: min(42.2vw, 88.9dvh);
+  width: var(--jw-brand-mark-width);
   height: auto;
 
   transform: translate(-50%, -50%);
