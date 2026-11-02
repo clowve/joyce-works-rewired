@@ -91,6 +91,15 @@
       var hiddenFromTop =
         (1 - localProgress) * 100;
 
+      /*
+        Fractional clip edges can expose a hairline seam in Chromium.
+        Once a wipe has actually begun, reveal one extra physical pixel.
+      */
+      if (localProgress > 0 && localProgress < 1) {
+        hiddenFromTop =
+          Math.max(0, hiddenFromTop - (100 / viewportHeight));
+      }
+
       var clipValue =
         "inset(" + hiddenFromTop + "% 0 0 0)";
 
