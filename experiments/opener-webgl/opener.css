@@ -28,8 +28,8 @@ body {
 
 .opener-scroll {
   position: relative;
-  height: 320dvh;
-  min-height: 320dvh;
+  height: 980dvh;
+  min-height: 980dvh;
 }
 
 .opener-stage {
