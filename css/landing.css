@@ -425,12 +425,6 @@ a {
   pointer-events: none;
 }
 
-@media (max-width: 740px) {
-  .jw-mark {
-    width: min(78vw, 520px);
-  }
-}
-
 .disciplines-scene {
   background: var(--jw-offwhite);
 }
