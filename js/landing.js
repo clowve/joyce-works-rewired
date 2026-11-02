@@ -39,8 +39,9 @@
      revealed by moving only their clipping edges.
 
      Each wipe declares its own start/end point across the scene:
-     0.00 → 0.50 : psychedelic → black/pink wordmark
-     0.50 → 1.00 : black/pink wordmark → portrait mask
+     0.000 → 0.333 : psychedelic → black/pink wordmark
+     0.333 → 0.667 : black/pink wordmark → portrait reference
+     0.667 → 1.000 : portrait reference → bio reference
 
      This recreates the old card-to-card reveal without:
      - duplicate .gap elements
