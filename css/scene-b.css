@@ -54,20 +54,15 @@
 }
 
 .disciplines-artboard {
-  --artboard-ratio: 2.1069958848;
-
   position: absolute;
-  left: 50%;
-  top: 50%;
+  inset: 0;
 
-  width: min(100vw, calc(100dvh * var(--artboard-ratio)));
-  aspect-ratio: 2048 / 972;
+  width: 100%;
+  height: 100%;
 
   overflow: hidden;
 
   background: var(--jw-offwhite);
-
-  transform: translate(-50%, -50%);
 
   container-type: inline-size;
 }
@@ -122,13 +117,20 @@
 .disciplines-outline-mark {
   position: absolute;
 
-  left: 24.961399897%;
-  top: 17.695473251%;
+  /*
+    The base begins after the 5.1269% rail, so 47.3% centers the mark
+    against the actual viewport rather than merely centering it inside
+    the remaining white field.
+  */
+  left: 47.3%;
+  top: 51.4%;
 
-  width: 44.467318579%;
-  height: 67.386831276%;
+  width: min(42.2vw, 88.9dvh);
+  height: auto;
 
-  object-fit: fill;
+  transform: translate(-50%, -50%);
+
+  object-fit: contain;
 
   user-select: none;
   pointer-events: none;
