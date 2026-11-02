@@ -20,6 +20,11 @@
   var disciplinesScene =
     document.querySelector("[data-disciplines-scene]");
 
+  var disciplinesStage =
+    disciplinesScene
+      ? disciplinesScene.querySelector(".disciplines-stage")
+      : null;
+
   var disciplineWipes =
     Array.prototype.slice.call(
       document.querySelectorAll("[data-disciplines-wipe]")
@@ -40,6 +45,20 @@
 
     var progress =
       clamp01((-rect.top) / scrollDistance);
+
+    if (disciplinesStage) {
+      var entranceProgress =
+        clamp01(progress / 0.25);
+
+      var entranceHidden =
+        (1 - entranceProgress) * 100;
+
+      var entranceClip =
+        "inset(" + entranceHidden + "% 0 0 0)";
+
+      disciplinesStage.style.webkitClipPath = entranceClip;
+      disciplinesStage.style.clipPath = entranceClip;
+    }
 
     disciplineWipes.forEach(function (wipe) {
       var start =
