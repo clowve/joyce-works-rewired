@@ -415,11 +415,13 @@ a {
   display: block;
 
   /*
-    Centered by the state grid; scale against whichever viewport
-    dimension is tighter so window shape does not change its presence.
+    Card 2 uses the same exact visible geometry as the rest of the
+    standardized mark system — width, height and center all locked.
   */
   width: var(--jw-brand-mark-width);
-  height: auto;
+  height: var(--jw-brand-mark-height);
+
+  object-fit: fill;
 
   user-select: none;
   pointer-events: none;
@@ -592,4 +594,7 @@ a {
 
 .identity-opening-mark {
   z-index: 2;
+
+  /* Card 1 uses the canonical filled mark in white. */
+  filter: brightness(0) invert(1);
 }
