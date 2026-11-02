@@ -45,6 +45,11 @@
     var hiddenFromTop =
       (1 - entranceProgress) * 100;
 
+    if (entranceProgress > 0 && entranceProgress < 1) {
+      hiddenFromTop =
+        Math.max(0, hiddenFromTop - (100 / viewportHeight));
+    }
+
     var clipValue =
       "inset(" + hiddenFromTop + "% 0 0 0)";
 
