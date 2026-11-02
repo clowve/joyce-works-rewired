@@ -42,22 +42,17 @@
 }
 
 .clients-artboard {
-  --artboard-ratio: 2.1069958848;
-
   position: absolute;
-  left: 50%;
-  top: 50%;
+  inset: 0;
 
-  width: min(100vw, calc(100dvh * var(--artboard-ratio)));
-  aspect-ratio: 2048 / 972;
+  width: 100%;
+  height: 100%;
 
   overflow: hidden;
 
   background: var(--jw-black);
 
-  transform: translate(-50%, -50%);
-
-  container-type: inline-size;
+  container-type: size;
 }
 
 .clients-title {
@@ -65,9 +60,14 @@
   z-index: 5;
 
   left: 50%;
-  top: 6.7%;
+  top: 6.7dvh;
 
-  width: 20.5%;
+  /*
+    Original scale:
+    20.5% of 2048px ≈ 43.2% of the 972px canvas height.
+    Whichever viewport dimension is tighter controls the title.
+  */
+  width: min(20.5vw, 43.2dvh);
   height: auto;
 
   transform: translateX(-50%);
@@ -81,17 +81,21 @@
   z-index: 1;
 
   left: 50%;
-  top: 15.3%;
+  top: 52.7%;
 
-  width: 46.8%;
+  /*
+    The old mark was effectively centered in its 2048 × 972 card.
+    Keep that visual center, but size against the real viewport.
+  */
+  width: min(46.8vw, 98.6dvh);
   height: auto;
 
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
 
   opacity: 0.88;
 
   filter:
-    drop-shadow(0 0 0.25cqw rgba(245, 90, 147, 0.32));
+    drop-shadow(0 0 min(0.25vw, 0.53dvh) rgba(245, 90, 147, 0.32));
 
   animation:
     clients-mark-pulse 2.8s ease-in-out infinite;
@@ -106,15 +110,15 @@
     opacity: 0.72;
 
     filter:
-      drop-shadow(0 0 0.16cqw rgba(245, 90, 147, 0.24));
+      drop-shadow(0 0 min(0.16vw, 0.34dvh) rgba(245, 90, 147, 0.24));
   }
 
   50% {
     opacity: 1;
 
     filter:
-      drop-shadow(0 0 0.72cqw rgba(245, 90, 147, 0.86))
-      drop-shadow(0 0 1.15cqw rgba(245, 90, 147, 0.34));
+      drop-shadow(0 0 min(0.72vw, 1.52dvh) rgba(245, 90, 147, 0.86))
+      drop-shadow(0 0 min(1.15vw, 2.42dvh) rgba(245, 90, 147, 0.34));
   }
 }
 
@@ -122,17 +126,24 @@
   position: absolute;
   z-index: 4;
 
-  left: 16.8%;
-  right: 16.8%;
-  top: 17.3%;
-  bottom: 14.8%;
+  left: 50%;
+  top: 51.25%;
+
+  /*
+    Preserve the old dense 7 × 7 field as one responsive composition
+    rather than stretching its rows and columns independently.
+  */
+  width: min(66.4vw, 139.9dvh);
+  height: min(67.9dvh, 32.2vw);
+
+  transform: translate(-50%, -50%);
 
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   grid-template-rows: repeat(7, minmax(0, 1fr));
 
-  column-gap: 1.15cqw;
-  row-gap: 0.35cqw;
+  column-gap: min(1.15vw, 2.42dvh);
+  row-gap: min(0.35vw, 0.74dvh);
 
   align-items: center;
   justify-items: center;
@@ -152,7 +163,7 @@
     Helvetica,
     sans-serif;
 
-  font-size: 0.88cqw;
+  font-size: min(0.88vw, 1.85dvh);
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.035em;
@@ -166,36 +177,36 @@
 }
 
 .client-placeholder--1 {
-  font-size: 0.72cqw;
+  font-size: min(0.72vw, 1.52dvh);
   font-weight: 500;
   letter-spacing: 0.01em;
 }
 
 .client-placeholder--2 {
-  font-size: 1.02cqw;
+  font-size: min(1.02vw, 2.15dvh);
   font-weight: 800;
 }
 
 .client-placeholder--3 {
-  font-size: 0.82cqw;
+  font-size: min(0.82vw, 1.73dvh);
   font-style: italic;
   font-weight: 600;
 }
 
 .client-placeholder--4 {
-  font-size: 0.67cqw;
+  font-size: min(0.67vw, 1.41dvh);
   font-weight: 500;
   letter-spacing: 0.04em;
 }
 
 .client-placeholder--5 {
-  font-size: 1.08cqw;
+  font-size: min(1.08vw, 2.28dvh);
   font-weight: 900;
   letter-spacing: -0.06em;
 }
 
 .client-placeholder--6 {
-  font-size: 0.76cqw;
+  font-size: min(0.76vw, 1.60dvh);
   font-weight: 700;
   letter-spacing: 0.015em;
 }
