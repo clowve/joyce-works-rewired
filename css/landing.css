@@ -16,6 +16,8 @@
     Width is controlled by whichever viewport dimension is tighter.
   */
   --jw-brand-mark-width: min(43.8vw, 92dvh);
+  --jw-brand-mark-center-x: 50%;
+  --jw-brand-mark-center-y: 50%;
 }
 
 *,
@@ -326,8 +328,8 @@ a {
   --artboard-ratio: 2.1069958848;
 
   position: absolute;
-  left: 50%;
-  top: 50%;
+  left: var(--jw-brand-mark-center-x);
+  top: var(--jw-brand-mark-center-y);
 
   /*
     Keep the registered composition responsive, but cap its growth so
@@ -343,7 +345,12 @@ a {
 
   aspect-ratio: 2048 / 972;
 
-  transform: translate(-50%, -50%);
+  /*
+    The visible mark's center is slightly right/down of the source
+    artboard center. Offset the entire registered plane so the mark
+    itself lands at the shared site-wide center.
+  */
+  transform: translate(-50.4150390625%, -51.3374485595%);
 }
 
 /*
