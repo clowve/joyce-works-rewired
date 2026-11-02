@@ -122,8 +122,8 @@
     against the actual viewport rather than merely centering it inside
     the remaining white field.
   */
-  left: 47.3%;
-  top: 51.4%;
+  left: 47.297992795%;
+  top: var(--jw-brand-mark-center-y);
 
   width: var(--jw-brand-mark-width);
   height: auto;
