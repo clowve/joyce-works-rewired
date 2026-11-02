@@ -89,10 +89,12 @@
     The mark scales against whichever dimension is tighter so it stays
     visually stable across wide, tall and windowed desktop shapes.
   */
-  width: var(--jw-brand-mark-width);
-  height: auto;
+  width: var(--jw-outline-canvas-width);
+  height: var(--jw-outline-canvas-height);
 
   transform: translate(-50%, -50%);
+
+  object-fit: fill;
 
   user-select: none;
   pointer-events: none;
