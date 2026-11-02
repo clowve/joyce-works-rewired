@@ -1,0 +1,236 @@
+/* ==========================================================================
+   Scene D — Final CTA
+
+   Native replacement for the old flattened image + SVG image-map card.
+
+   The Clients card stays pinned for its final viewport while this ONE
+   CTA card wipes upward over it. Because this is the final section,
+   its height is only 200dvh: one viewport of transition, then the page
+   ends on the fully revealed CTA instead of scrolling into blank space.
+   ========================================================================== */
+
+.cta-scene {
+  position: relative;
+  z-index: 8;
+
+  height: 200dvh;
+  min-height: 200dvh;
+
+  /* Begin during the final held Clients viewport. */
+  margin-top: -200dvh;
+
+  background: transparent;
+}
+
+.cta-stage {
+  position: sticky;
+  top: 0;
+
+  width: 100%;
+  height: 100dvh;
+
+  overflow: hidden;
+
+  background: var(--jw-black);
+
+  -webkit-clip-path: inset(100% 0 0 0);
+  clip-path: inset(100% 0 0 0);
+
+  will-change: clip-path;
+}
+
+.cta-artboard {
+  --artboard-ratio: 2.1069958848;
+
+  position: absolute;
+  left: 50%;
+  top: 50%;
+
+  width: min(100vw, calc(100dvh * var(--artboard-ratio)));
+  aspect-ratio: 2048 / 972;
+
+  overflow: hidden;
+
+  transform: translate(-50%, -50%);
+
+  container-type: inline-size;
+}
+
+.cta-half {
+  position: absolute;
+  z-index: 0;
+
+  top: 0;
+  bottom: 0;
+
+  width: 50%;
+}
+
+.cta-half--left {
+  left: 0;
+
+  background: var(--jw-black);
+}
+
+.cta-half--right {
+  right: 0;
+
+  background: var(--jw-pink);
+}
+
+/*
+  Two copies of the exact same outline mark are clipped at the 50/50 seam,
+  reproducing the split-colour treatment from the original final card.
+*/
+.cta-outline {
+  position: absolute;
+  z-index: 1;
+
+  left: 50%;
+  top: 17.4%;
+
+  width: 43.8%;
+  height: auto;
+
+  transform: translateX(-50%);
+
+  user-select: none;
+  pointer-events: none;
+}
+
+.cta-outline--left {
+  -webkit-clip-path: inset(0 50% 0 0);
+  clip-path: inset(0 50% 0 0);
+}
+
+.cta-outline--right {
+  -webkit-clip-path: inset(0 0 0 50%);
+  clip-path: inset(0 0 0 50%);
+}
+
+.cta-link {
+  position: absolute;
+  z-index: 3;
+
+  top: 0;
+  bottom: 0;
+
+  width: 50%;
+
+  display: block;
+
+  color: inherit;
+  text-decoration: none;
+
+  cursor: pointer;
+}
+
+.cta-link--work {
+  left: 0;
+}
+
+.cta-link--hello {
+  right: 0;
+}
+
+.cta-copy {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+
+  width: 72%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  transform: translate(-50%, -49%);
+
+  pointer-events: none;
+}
+
+.cta-link--hello .cta-copy {
+  width: 74%;
+
+  transform: translate(-50%, -47%);
+}
+
+.cta-heading {
+  display: block;
+
+  width: 100%;
+  height: auto;
+
+  transition:
+    filter 500ms ease-in-out,
+    opacity 500ms ease-in-out;
+
+  user-select: none;
+  pointer-events: none;
+}
+
+.cta-subcopy {
+  display: block;
+
+  margin-top: -0.4cqw;
+
+  font-family:
+    "Arial Narrow",
+    "Helvetica Neue Condensed",
+    Impact,
+    sans-serif;
+
+  font-size: 1.85cqw;
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+
+  text-align: center;
+  text-transform: uppercase;
+
+  color: var(--jw-pink);
+
+  transition:
+    color 500ms ease-in-out,
+    text-shadow 500ms ease-in-out;
+}
+
+.cta-subcopy--email {
+  margin-top: -0.15cqw;
+
+  font-size: 1.55cqw;
+  letter-spacing: -0.045em;
+
+  color: var(--jw-black);
+}
+
+/* Original interaction: CTA lettering turns white on hover. */
+.cta-link:hover .cta-heading,
+.cta-link:focus-visible .cta-heading {
+  filter:
+    brightness(0)
+    invert(1);
+}
+
+.cta-link:hover .cta-subcopy,
+.cta-link:focus-visible .cta-subcopy {
+  color: #fff;
+
+  text-shadow:
+    0 0 0.55cqw rgba(255,255,255,0.14);
+}
+
+.cta-link:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -6px;
+}
+
+/*
+  Keep the interaction calm. The old card changed colour; it did not
+  scale or physically move.
+*/
+.cta-link,
+.cta-copy,
+.cta-heading {
+  transform-origin: center;
+}
