@@ -37,6 +37,11 @@
     var hiddenFromTop =
       (1 - progress) * 100;
 
+    if (progress > 0 && progress < 1) {
+      hiddenFromTop =
+        Math.max(0, hiddenFromTop - (100 / viewportHeight));
+    }
+
     var clipValue =
       "inset(" + hiddenFromTop + "% 0 0 0)";
 
