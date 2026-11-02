@@ -299,16 +299,85 @@ a {
 }
 
 .identity-portrait-state {
-  background-color: var(--jw-pink);
-  background-image:
-    url("https://www.dropbox.com/s/wo8y9p5ft5ys7w8/landing02-2274x1080-2.jpg?raw=1");
-  background-position: center center;
-  background-repeat: no-repeat;
-  background-size: contain;
+  background: var(--jw-pink);
 }
 
-.identity-portrait-mask {
-  display: none;
+/*
+  Shared 2048 × 972 composition plane.
+
+  Every portrait/reference asset supplied for this sequence uses the
+  same canvas, so keeping one contained artboard preserves registration
+  across the masked mark, cutout, white strip and copy.
+*/
+.identity-artboard {
+  --artboard-ratio: 2.1069958848;
+
+  position: absolute;
+  left: 50%;
+  top: 50%;
+
+  width: min(100vw, calc(100dvh * var(--artboard-ratio)));
+  aspect-ratio: 2048 / 972;
+
+  transform: translate(-50%, -50%);
+}
+
+/*
+  Canonical mark placement measured from the supplied 2048 × 972
+  overlap references.
+
+  x: 611 / 2048
+  y: 172 / 972
+  w: 843 / 2048
+  h: 654 / 972
+*/
+.identity-photo-mark,
+.identity-outline-mark {
+  position: absolute;
+
+  left: 29.833984375%;
+  top: 17.695473251%;
+  width: 41.162109375%;
+  height: 67.283950617%;
+
+  pointer-events: none;
+}
+
+.identity-photo-mark {
+  overflow: hidden;
+
+  -webkit-mask-image:
+    url("../assets/identity/joyce-works-mark.svg");
+  mask-image:
+    url("../assets/identity/joyce-works-mark.svg");
+
+  -webkit-mask-position: center;
+  mask-position: center;
+
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+/*
+  The source portrait remains on the complete 2048 × 972 coordinate
+  system while its parent is only the mark-sized window.
+*/
+.identity-photo-source {
+  position: absolute;
+
+  left: -72.479240807%;
+  top: -26.29969419%;
+
+  width: 242.941874258%;
+  height: 148.623853211%;
+
+  max-width: none;
+
+  user-select: none;
+  pointer-events: none;
 }
 
 .jw-mark {
@@ -325,7 +394,6 @@ a {
   .jw-mark {
     width: min(78vw, 520px);
   }
-
 }
 
 .disciplines-scene {
@@ -357,20 +425,86 @@ a {
 
 
 /* --------------------------------------------------------------------------
-   Scene A — State 4 reference
-   Temporary only: preserves the original finished frame while the
-   white-strip / outline / cutout composition is rebuilt natively.
+   Scene A — State 4 native overlap composition
    -------------------------------------------------------------------------- */
 
 .identity-wipe--bio-reference {
   z-index: 4;
 }
 
-.identity-bio-reference-state {
-  background-color: var(--jw-black);
-  background-image:
-    url("https://www.dropbox.com/s/h7fa9zbs23c2o5g/landing-02-static.jpg?raw=1");
-  background-position: center center;
-  background-repeat: no-repeat;
-  background-size: contain;
+.identity-bio-state {
+  background: var(--jw-black);
+}
+
+/*
+  White strip measured directly from the supplied 2048 × 972 reference.
+
+  x: 219 / 2048
+  y: 327 / 972
+  w: 1610 / 2048
+  h: 368 / 972
+*/
+.identity-white-strip {
+  position: absolute;
+  z-index: 2;
+
+  left: 10.693359375%;
+  top: 33.641975309%;
+  width: 78.61328125%;
+  height: 37.860082305%;
+
+  background: #f7f7f7;
+}
+
+/*
+  State 4 keeps the same photograph-filled mark beneath the strip.
+*/
+.identity-photo-mark--bio {
+  z-index: 1;
+}
+
+/*
+  The outline mark is the exact same geometry and placement as the
+  photograph-filled mark, but only its intersection with the white
+  strip is visible.
+
+  strip intersection relative to the mark:
+  top  = (327 - 172) / 654
+  bottom = (826 - 695) / 654
+*/
+.identity-outline-mark {
+  z-index: 3;
+
+  object-fit: fill;
+
+  -webkit-clip-path: inset(23.70030581% 0 20.03058104% 0);
+  clip-path: inset(23.70030581% 0 20.03058104% 0);
+
+  user-select: none;
+}
+
+/*
+  Transparent cutout stays on the same 2048 × 972 artboard, so the
+  overlap is registered without manual silhouette coordinates.
+*/
+.identity-cutout,
+.identity-copy {
+  position: absolute;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+
+  pointer-events: none;
+  user-select: none;
+}
+
+.identity-cutout {
+  z-index: 4;
+}
+
+.identity-copy {
+  z-index: 5;
 }
