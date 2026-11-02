@@ -22,7 +22,7 @@
   /* ---------------------------------------------------------------------
      Scroll choreography
      0.00–0.12 ambient/interactive field
-     0.10–0.88 JOYCE + WORKS draw together as one object
+     0.08–0.94 JOYCE + WORKS draw together as one object
      0.54–0.80 white solid fill resolves underneath
      0.76–1.00 black veil prepares Card 2
      --------------------------------------------------------------------- */
@@ -62,7 +62,7 @@
     const distance = Math.max(1, scrollSection.offsetHeight - vh);
     const progress = clamp01(-rect.top / distance);
 
-    const drawProgress = smooth(0.10, 0.88, progress);
+    const drawProgress = smooth(0.08, 0.94, progress);
     const fillProgress = smooth(0.54, 0.80, progress);
     const veilProgress = smooth(0.76, 1.00, progress);
 
@@ -143,17 +143,40 @@
     in vec2 v_uv;
     out vec4 outColor;
 
-    float hash11(float p) {
-      p = fract(p * 0.1031);
-      p *= p + 33.33;
-      p *= p + p;
-      return fract(p);
+    float hash21(vec2 p) {
+      p = fract(p * vec2(123.34, 456.21));
+      p += dot(p, p + 45.32);
+      return fract(p.x * p.y);
     }
 
-    float hash21(vec2 p) {
-      vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-      p3 += dot(p3, p3.yzx + 33.33);
-      return fract((p3.x + p3.y) * p3.z);
+    float noise2(vec2 p) {
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      vec2 u = f * f * (3.0 - 2.0 * f);
+
+      float a = hash21(i);
+      float b = hash21(i + vec2(1.0, 0.0));
+      float c = hash21(i + vec2(0.0, 1.0));
+      float d = hash21(i + vec2(1.0, 1.0));
+
+      return mix(
+        mix(a, b, u.x),
+        mix(c, d, u.x),
+        u.y
+      );
+    }
+
+    float fbm(vec2 p) {
+      float value = 0.0;
+      float amp = 0.5;
+
+      for (int i = 0; i < 5; i++) {
+        value += amp * noise2(p);
+        p = p * 2.03 + vec2(13.17, 7.91);
+        amp *= 0.5;
+      }
+
+      return value;
     }
 
     vec2 coverUV(vec2 uv) {
@@ -175,213 +198,253 @@
       vec2 uv = v_uv;
 
       float aspect = u_resolution.x / max(1.0, u_resolution.y);
+
       vec2 p = uv;
       p.x *= aspect;
 
       vec2 mp = u_pointer;
       mp.x *= aspect;
 
-      float dist = distance(p, mp);
-      float velocityMag = min(1.0, length(u_pointerVelocity) * 28.0);
+      vec2 tp = u_pointerTrail;
+      tp.x *= aspect;
+
+      float velocityMag = min(1.0, length(u_pointerVelocity) * 22.0);
       float activeEnergy = max(u_pointerEnergy, velocityMag);
 
-      vec2 trailPoint = u_pointerTrail;
-      trailPoint.x *= aspect;
-      float trailDist = distance(p, trailPoint);
-
       /*
-        Broad, feathered interaction field. The trail is deliberately
-        wider and softer so a disturbance lingers after the cursor moves.
+        Smaller radius than V3, with broad feathering.
+        The trail has its own independent field so it can read as a wake.
       */
-      float radius = mix(0.36, 0.48, activeEnergy);
+      float radius = mix(0.17, 0.24, activeEnergy);
+      float dist = distance(p, mp);
       float influence =
-        1.0 - smoothstep(radius * 0.16, radius, dist);
+        1.0 - smoothstep(radius * 0.12, radius, dist);
 
-      float trailRadius = radius * 1.18;
+      float trailRadius = radius * 1.08;
+      float trailDist = distance(p, tp);
       float trailInfluence =
-        (1.0 - smoothstep(trailRadius * 0.08, trailRadius, trailDist)) *
-        u_trailEnergy *
-        0.72;
+        (1.0 - smoothstep(trailRadius * 0.10, trailRadius, trailDist)) *
+        u_trailEnergy;
 
       /*
-        Continuous ambient motion:
-        several independently moving vertical/diagonal shard systems.
-        Nothing waits for a discrete glitch event; the image is always
-        sliding, shearing and misregistering a little.
+        Continuous flow field.
+        Two evolving FBM fields create a smooth vector current with no
+        visible tiled/banded cell boundaries.
       */
-      float bandA = floor(uv.x * 11.0);
-      float bandB = floor((uv.x + uv.y * 0.22) * 19.0);
-      float stripe = floor(uv.y * 17.0);
+      vec2 flowP = vec2(
+        uv.x * 3.1,
+        uv.y * 2.6
+      );
 
-      float seedA = hash11(bandA + 3.7);
-      float seedB = hash11(bandB + 11.2);
-      float seedS = hash11(stripe + 29.4);
+      float n1 = fbm(
+        flowP +
+        vec2(u_time * 0.075, -u_time * 0.052)
+      );
 
-      float driftA =
-        sin(u_time * (0.42 + seedA * 0.24) + seedA * 6.28318);
-      float driftB =
-        sin(u_time * (0.28 + seedB * 0.31) + seedB * 9.73);
-      float driftS =
-        sin(u_time * (0.55 + seedS * 0.20) + seedS * 5.11);
+      float n2 = fbm(
+        flowP.yx * 1.13 +
+        vec2(-u_time * 0.061, u_time * 0.083) +
+        17.0
+      );
 
-      vec2 ambientOffset = vec2(
-        driftB * (0.007 + seedB * 0.016) +
-        driftS * (0.004 + seedS * 0.010),
-        driftA * (0.010 + seedA * 0.020)
+      vec2 flow = vec2(
+        n1 - 0.5,
+        n2 - 0.5
       );
 
       /*
-        A slower secondary current keeps the field visibly alive even
-        between glitch surges.
+        Rotate the field a little so it feels like current rather than
+        simple zoom/noise displacement.
       */
-      ambientOffset += vec2(
-        sin(u_time * 0.19 + uv.y * 8.0) * 0.0045,
-        cos(u_time * 0.23 + uv.x * 7.0) * 0.0055
+      flow = vec2(
+        flow.x - flow.y * 0.42,
+        flow.y + flow.x * 0.28
       );
 
       /*
-        Smooth glitch surges ride on top of the continuous movement.
-        They ramp in/out rather than popping between static states.
+        Stronger ambient current than V3.
       */
-      float surgeA =
-        smoothstep(
-          0.62,
-          0.98,
-          0.5 + 0.5 * sin(u_time * 1.13 + bandB * 0.91)
-        );
-
-      float surgeB =
-        smoothstep(
-          0.76,
-          0.995,
-          0.5 + 0.5 * sin(u_time * 0.73 + stripe * 1.37 + 1.4)
-        );
-
-      ambientOffset.x +=
-        (seedS - 0.5) *
-        surgeA *
-        (0.006 + seedS * 0.011);
-
-      ambientOffset.y +=
-        (seedB - 0.5) *
-        surgeB *
-        (0.004 + seedB * 0.007);
-
-      uv += ambientOffset;
+      uv += flow * 0.042;
 
       /*
-        Cursor disruption:
-        use local horizontal slices + directional shear, not radial
-        refraction. Fast motion increases the displacement and gives
-        the cursor a sharper tearing quality.
+        Secondary slow rolling current for visible large-scale movement.
       */
-      float localStripe =
-        floor((uv.y + u_time * 0.018) * 24.0);
+      uv += vec2(
+        sin(uv.y * 5.0 + u_time * 0.31) * 0.010,
+        cos(uv.x * 4.2 - u_time * 0.27) * 0.012
+      );
 
       /*
-        Important: seed only from space, never the live pointer position.
-        That keeps each slice's identity stable while the cursor moves,
-        avoiding the "new glitch every pixel" jumpiness from V2.
+        Soft elongated glitch slices. These are intentionally sparse,
+        wide and continuously evolving instead of grid-like cells.
       */
-      float localSeed =
-        hash11(localStripe + 7.31);
+      float sliceCoord =
+        uv.y * 6.5 +
+        fbm(vec2(uv.x * 1.4, u_time * 0.08)) * 1.8;
 
-      float sliceMotion =
+      float sliceId = floor(sliceCoord);
+      float sliceNoise = hash21(vec2(sliceId, 9.3));
+
+      float slicePulse =
+        0.5 + 0.5 *
         sin(
-          u_time * (0.86 + localSeed * 0.58) +
-          localStripe * 0.77
+          u_time * (0.42 + sliceNoise * 0.33) +
+          sliceNoise * 6.2831
         );
 
-      vec2 velocityDir =
-        normalize(u_pointerVelocity + vec2(0.0001, 0.0001));
+      float sliceGate =
+        smoothstep(0.72, 0.98, slicePulse);
 
-      vec2 perpendicular =
-        vec2(-velocityDir.y, velocityDir.x);
-
-      float tearStrength =
-        influence *
-        (0.020 + activeEnergy * 0.054);
-
-      float trailTear =
-        trailInfluence *
-        (0.010 + u_trailEnergy * 0.026);
+      float sliceEdge =
+        smoothstep(
+          0.02,
+          0.18,
+          fract(sliceCoord)
+        ) *
+        (1.0 - smoothstep(
+          0.78,
+          0.98,
+          fract(sliceCoord)
+        ));
 
       uv.x +=
-        (localSeed - 0.5) *
-        sliceMotion *
-        (tearStrength + trailTear);
-
-      uv +=
-        velocityDir *
-        (influence * activeEnergy * 0.026 +
-         trailInfluence * u_trailEnergy * 0.010);
-
-      uv +=
-        perpendicular *
-        (localSeed - 0.5) *
-        (influence * activeEnergy * 0.019 +
-         trailInfluence * u_trailEnergy * 0.010);
+        (sliceNoise - 0.5) *
+        sliceGate *
+        sliceEdge *
+        0.020;
 
       /*
-        Drag the sampled texture behind cursor motion. The delayed trail
-        keeps a mild after-image before easing back to the base field.
+        Cursor disruption is continuous and interpolated.
+        No per-pointer-position random seed changes.
       */
+      vec2 velDir =
+        normalize(u_pointerVelocity + vec2(0.0001));
+
+      vec2 perp =
+        vec2(-velDir.y, velDir.x);
+
+      float cursorNoise =
+        fbm(
+          vec2(
+            uv.y * 8.0 + u_time * 0.18,
+            uv.x * 5.0 - u_time * 0.11
+          )
+        );
+
+      float cursorShear =
+        (cursorNoise - 0.5) *
+        influence *
+        (0.050 + activeEnergy * 0.060);
+
+      uv.x += cursorShear;
+
+      uv +=
+        velDir *
+        influence *
+        activeEnergy *
+        0.028;
+
+      uv +=
+        perp *
+        (cursorNoise - 0.5) *
+        influence *
+        activeEnergy *
+        0.020;
+
+      /*
+        Stronger delayed wake. Because its center lags behind the cursor,
+        it stays visible after the live distortion has moved on.
+      */
+      float trailNoise =
+        fbm(
+          vec2(
+            uv.y * 6.0 - u_time * 0.10,
+            uv.x * 4.0 + u_time * 0.07
+          ) + 23.0
+        );
+
+      uv.x +=
+        (trailNoise - 0.5) *
+        trailInfluence *
+        (0.038 + u_trailEnergy * 0.040);
+
       uv -=
         u_pointerVelocity *
-        (influence * (0.34 + activeEnergy * 0.66) +
-         trailInfluence * 0.30);
+        (
+          influence * (0.42 + activeEnergy * 0.72) +
+          trailInfluence * 0.52
+        );
 
       vec2 texUV = coverUV(uv);
 
       /*
-        Chromatic misregistration is always faintly present, then grows
-        through ambient surges and cursor velocity.
+        Continuous chromatic misregistration from the field itself.
       */
       float ambientChroma =
-        0.0022 +
-        surgeA * 0.0026 +
-        abs(driftB) * 0.0017;
+        0.0027 +
+        length(flow) * 0.004 +
+        sliceGate * sliceEdge * 0.003;
 
       float pointerChroma =
         influence *
-        (0.0055 + activeEnergy * 0.022);
+        (0.006 + activeEnergy * 0.024);
 
       float trailChroma =
         trailInfluence *
-        (0.003 + u_trailEnergy * 0.010);
+        (0.005 + u_trailEnergy * 0.014);
 
       float chroma =
-        ambientChroma + pointerChroma + trailChroma;
+        ambientChroma +
+        pointerChroma +
+        trailChroma;
 
       vec2 chromaDir =
         normalize(
-          u_pointerVelocity +
-          vec2(
-            0.18 + driftB * 0.12,
-            0.04 + driftA * 0.07
-          )
+          velDir * 0.72 +
+          flow * 0.85 +
+          vec2(0.22, 0.04)
         );
 
-      vec2 cOffset = chromaDir * chroma;
+      vec2 cOffset =
+        chromaDir * chroma;
 
-      float r = texture(u_texture, coverUV(uv + cOffset)).r;
-      float g = texture(u_texture, texUV).g;
-      float b = texture(u_texture, coverUV(uv - cOffset)).b;
+      float r =
+        texture(
+          u_texture,
+          coverUV(uv + cOffset)
+        ).r;
 
-      vec3 color = vec3(r, g, b);
+      float g =
+        texture(
+          u_texture,
+          texUV
+        ).g;
+
+      float b =
+        texture(
+          u_texture,
+          coverUV(uv - cOffset)
+        ).b;
+
+      vec3 color =
+        vec3(r, g, b);
 
       /*
-        Directional light smear. Strongest with faster cursor movement;
-        the background animation still runs independently underneath.
+        More visible smear, including a separate lagging wake.
       */
       vec3 smear = vec3(0.0);
-      for (int i = 1; i <= 6; i++) {
+
+      for (int i = 1; i <= 8; i++) {
         float fi = float(i);
+
         vec2 smearUV =
           uv -
           u_pointerVelocity *
-          influence *
-          (0.13 * fi);
+          (
+            influence * 0.16 +
+            trailInfluence * 0.12
+          ) *
+          fi;
 
         smear +=
           texture(
@@ -390,35 +453,37 @@
           ).rgb;
       }
 
-      smear *= 1.0 / 6.0;
+      smear *= 0.125;
 
       float smearMix =
         min(
-          0.72,
-          influence * activeEnergy * 0.66 +
-          trailInfluence * u_trailEnergy * 0.42
+          0.78,
+          influence * activeEnergy * 0.70 +
+          trailInfluence * u_trailEnergy * 0.56
         );
 
       color =
         mix(
           color,
-          max(color, smear * 1.20),
+          max(color, smear * 1.22),
           smearMix
         );
 
-      /* Fine print/noise character. */
+      /*
+        Very fine animated grain, no visible checker/cell pattern.
+      */
       float grain =
         hash21(
           gl_FragCoord.xy +
           vec2(
-            floor(u_time * 16.0),
-            floor(u_time * 11.0)
+            floor(u_time * 17.0),
+            floor(u_time * 13.0)
           )
         ) - 0.5;
 
-      color += grain * 0.015;
+      color += grain * 0.014;
 
-      /* Keep the already-approved handoff timing unchanged. */
+      /* Approved handoff timing stays unchanged. */
       color *=
         mix(
           1.0,
@@ -428,7 +493,7 @@
 
       outColor = vec4(color, 1.0);
     }
-  `;
+  `
 
   function compile(type, source) {
     const shader = gl.createShader(type);
@@ -496,6 +561,8 @@
   };
 
   uniforms = {
+    targetPointerX: 0.5,
+    targetPointerY: 0.5,
     pointerX: 0.5,
     pointerY: 0.5,
     trailX: 0.5,
@@ -523,10 +590,10 @@
     const vx = (x - previousPointerX) / dt;
     const vy = (y - previousPointerY) / dt;
 
-    uniforms.pointerX = x;
-    uniforms.pointerY = y;
-    uniforms.velocityX = vx * 16;
-    uniforms.velocityY = vy * 16;
+    uniforms.targetPointerX = x;
+    uniforms.targetPointerY = y;
+    uniforms.velocityX = vx * 15;
+    uniforms.velocityY = vy * 15;
 
     const speed = Math.hypot(vx, vy) * 980;
     uniforms.energy = Math.min(1, 0.22 + speed);
@@ -604,19 +671,24 @@
     resize();
 
     uniforms.energy *= 0.956;
-    uniforms.trailEnergy *= 0.972;
+    uniforms.trailEnergy *= 0.982;
 
     /*
-      A delayed pointer wake. Fast enough to follow, slow enough to leave
-      a visible memory of the disturbance.
+      Smooth the live disruption itself so it never snaps directly to the
+      raw mouse coordinate, then make the wake follow much more slowly.
     */
-    uniforms.trailX +=
-      (uniforms.pointerX - uniforms.trailX) * 0.075;
-    uniforms.trailY +=
-      (uniforms.pointerY - uniforms.trailY) * 0.075;
+    uniforms.pointerX +=
+      (uniforms.targetPointerX - uniforms.pointerX) * 0.18;
+    uniforms.pointerY +=
+      (uniforms.targetPointerY - uniforms.pointerY) * 0.18;
 
-    uniforms.velocityX *= 0.91;
-    uniforms.velocityY *= 0.91;
+    uniforms.trailX +=
+      (uniforms.pointerX - uniforms.trailX) * 0.032;
+    uniforms.trailY +=
+      (uniforms.pointerY - uniforms.trailY) * 0.032;
+
+    uniforms.velocityX *= 0.925;
+    uniforms.velocityY *= 0.925;
 
     gl.useProgram(program);
     gl.activeTexture(gl.TEXTURE0);
