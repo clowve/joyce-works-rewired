@@ -249,7 +249,12 @@ a {
 
   background-position: center center;
   background-repeat: no-repeat;
-  background-size: contain;
+
+  /*
+    The opener is abstract edge-to-edge artwork. Let it behave like a
+    modern hero background instead of preserving the old fixed poster box.
+  */
+  background-size: cover;
 }
 
 /*
@@ -303,11 +308,13 @@ a {
 }
 
 /*
-  Shared 2048 × 972 composition plane.
+  Shared 2048 × 972 registration plane.
 
   Every portrait/reference asset supplied for this sequence uses the
-  same canvas, so keeping one contained artboard preserves registration
-  across the masked mark, cutout, white strip and copy.
+  same canvas. Instead of containing that canvas like a fixed poster,
+  scale the WHOLE registered plane together until it covers the viewport.
+  The browser may crop the outer edges, but the portrait, mask, strip,
+  cutout and copy remain mathematically locked to one another.
 */
 .identity-artboard {
   --artboard-ratio: 2.1069958848;
@@ -316,7 +323,7 @@ a {
   left: 50%;
   top: 50%;
 
-  width: min(100vw, calc(100dvh * var(--artboard-ratio)));
+  width: max(100vw, calc(100dvh * var(--artboard-ratio)));
   aspect-ratio: 2048 / 972;
 
   transform: translate(-50%, -50%);
@@ -383,7 +390,11 @@ a {
 .jw-mark {
   display: block;
 
-  width: min(790px, 42vw);
+  /*
+    Centered by the state grid; scale against whichever viewport
+    dimension is tighter so window shape does not change its presence.
+  */
+  width: min(42vw, 88dvh);
   height: auto;
 
   user-select: none;
