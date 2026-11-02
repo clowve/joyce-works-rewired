@@ -1,0 +1,102 @@
+/* ==========================================================================
+   JOYCE.WORKS — full-bleed general pass
+
+   The 2048 × 972 artboards were reconstruction scaffolds.
+   Scenes B/C/D are now native enough to use the actual viewport.
+   Scene A keeps its registered portrait plane, but viewport-level fields
+   are allowed to bleed beyond that reference canvas.
+   ========================================================================== */
+
+html,
+body {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   Scene A
+   Preserve photo/cutout registration, but stop the scene reading like
+   a contained card where it is safe to do so.
+   -------------------------------------------------------------------------- */
+
+.identity-opening {
+  /*
+    The opener is abstract artwork, so cropping its outer edges is safer
+    than letterboxing it on taller/narrower desktop viewports.
+  */
+  background-size: cover;
+}
+
+/*
+  The white bio band is still vertically registered to the 2048 × 972
+  portrait plane, but horizontally it now spans the real viewport.
+*/
+.identity-white-strip {
+  left: calc(50% - 50vw);
+  width: 100vw;
+}
+
+/* --------------------------------------------------------------------------
+   Scene B — Disciplines
+   -------------------------------------------------------------------------- */
+
+.disciplines-artboard {
+  left: 0;
+  top: 0;
+
+  width: 100%;
+  height: 100%;
+
+  aspect-ratio: auto;
+
+  transform: none;
+}
+
+/*
+  Preserve the canonical JOYCE WORKS proportions while allowing its
+  position to respond to the viewport.
+*/
+.disciplines-outline-mark {
+  height: auto;
+  object-fit: contain;
+}
+
+/* --------------------------------------------------------------------------
+   Scene C — Clients
+   -------------------------------------------------------------------------- */
+
+.clients-artboard {
+  left: 0;
+  top: 0;
+
+  width: 100%;
+  height: 100%;
+
+  aspect-ratio: auto;
+
+  transform: none;
+}
+
+/* --------------------------------------------------------------------------
+   Scene D — CTA
+   -------------------------------------------------------------------------- */
+
+.cta-artboard {
+  left: 0;
+  top: 0;
+
+  width: 100%;
+  height: 100%;
+
+  aspect-ratio: auto;
+
+  transform: none;
+}
+
+/*
+  Keep the outline proportional even though its containing composition
+  now uses the full viewport rather than the old reference ratio.
+*/
+.cta-outline {
+  height: auto;
+}
