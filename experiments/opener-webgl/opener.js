@@ -22,7 +22,7 @@
   /* ---------------------------------------------------------------------
      Scroll choreography
      0.00–0.12 ambient/interactive field
-     0.12–0.72 JOYCE + WORKS draw together as one object
+     0.10–0.88 JOYCE + WORKS draw together as one object
      0.54–0.80 white solid fill resolves underneath
      0.76–1.00 black veil prepares Card 2
      --------------------------------------------------------------------- */
@@ -62,7 +62,7 @@
     const distance = Math.max(1, scrollSection.offsetHeight - vh);
     const progress = clamp01(-rect.top / distance);
 
-    const drawProgress = smooth(0.12, 0.72, progress);
+    const drawProgress = smooth(0.10, 0.88, progress);
     const fillProgress = smooth(0.54, 0.80, progress);
     const veilProgress = smooth(0.76, 1.00, progress);
 
@@ -133,8 +133,10 @@
     uniform vec2 u_resolution;
     uniform vec2 u_textureResolution;
     uniform vec2 u_pointer;
+    uniform vec2 u_pointerTrail;
     uniform vec2 u_pointerVelocity;
     uniform float u_pointerEnergy;
+    uniform float u_trailEnergy;
     uniform float u_time;
     uniform float u_scroll;
 
@@ -183,13 +185,23 @@
       float velocityMag = min(1.0, length(u_pointerVelocity) * 28.0);
       float activeEnergy = max(u_pointerEnergy, velocityMag);
 
+      vec2 trailPoint = u_pointerTrail;
+      trailPoint.x *= aspect;
+      float trailDist = distance(p, trailPoint);
+
       /*
-        Larger cursor field than V1. This is intentionally broad so the
-        interaction reads as a disruption in the image rather than a
-        small lens/pinch.
+        Broad, feathered interaction field. The trail is deliberately
+        wider and softer so a disturbance lingers after the cursor moves.
       */
-      float radius = mix(0.34, 0.46, activeEnergy);
-      float influence = smoothstep(radius, radius * 0.16, dist);
+      float radius = mix(0.36, 0.48, activeEnergy);
+      float influence =
+        1.0 - smoothstep(radius * 0.16, radius, dist);
+
+      float trailRadius = radius * 1.18;
+      float trailInfluence =
+        (1.0 - smoothstep(trailRadius * 0.08, trailRadius, trailDist)) *
+        u_trailEnergy *
+        0.72;
 
       /*
         Continuous ambient motion:
@@ -213,9 +225,18 @@
         sin(u_time * (0.55 + seedS * 0.20) + seedS * 5.11);
 
       vec2 ambientOffset = vec2(
-        driftB * (0.004 + seedB * 0.010) +
-        driftS * (0.002 + seedS * 0.006),
-        driftA * (0.006 + seedA * 0.013)
+        driftB * (0.007 + seedB * 0.016) +
+        driftS * (0.004 + seedS * 0.010),
+        driftA * (0.010 + seedA * 0.020)
+      );
+
+      /*
+        A slower secondary current keeps the field visibly alive even
+        between glitch surges.
+      */
+      ambientOffset += vec2(
+        sin(u_time * 0.19 + uv.y * 8.0) * 0.0045,
+        cos(u_time * 0.23 + uv.x * 7.0) * 0.0055
       );
 
       /*
@@ -239,12 +260,12 @@
       ambientOffset.x +=
         (seedS - 0.5) *
         surgeA *
-        (0.008 + seedS * 0.014);
+        (0.006 + seedS * 0.011);
 
       ambientOffset.y +=
         (seedB - 0.5) *
         surgeB *
-        (0.004 + seedB * 0.009);
+        (0.004 + seedB * 0.007);
 
       uv += ambientOffset;
 
@@ -257,12 +278,17 @@
       float localStripe =
         floor((uv.y + u_time * 0.018) * 24.0);
 
+      /*
+        Important: seed only from space, never the live pointer position.
+        That keeps each slice's identity stable while the cursor moves,
+        avoiding the "new glitch every pixel" jumpiness from V2.
+      */
       float localSeed =
-        hash11(localStripe + floor(u_pointer.y * 37.0));
+        hash11(localStripe + 7.31);
 
       float sliceMotion =
         sin(
-          u_time * (1.10 + localSeed * 0.90) +
+          u_time * (0.86 + localSeed * 0.58) +
           localStripe * 0.77
         );
 
@@ -274,34 +300,36 @@
 
       float tearStrength =
         influence *
-        (0.018 + activeEnergy * 0.050);
+        (0.020 + activeEnergy * 0.054);
+
+      float trailTear =
+        trailInfluence *
+        (0.010 + u_trailEnergy * 0.026);
 
       uv.x +=
         (localSeed - 0.5) *
         sliceMotion *
-        tearStrength;
+        (tearStrength + trailTear);
 
       uv +=
         velocityDir *
-        influence *
-        activeEnergy *
-        0.024;
+        (influence * activeEnergy * 0.026 +
+         trailInfluence * u_trailEnergy * 0.010);
 
       uv +=
         perpendicular *
-        influence *
         (localSeed - 0.5) *
-        activeEnergy *
-        0.018;
+        (influence * activeEnergy * 0.019 +
+         trailInfluence * u_trailEnergy * 0.010);
 
       /*
-        Drag the sampled texture behind cursor motion. This creates the
-        light-smear feeling without turning the whole field into liquid.
+        Drag the sampled texture behind cursor motion. The delayed trail
+        keeps a mild after-image before easing back to the base field.
       */
       uv -=
         u_pointerVelocity *
-        influence *
-        (0.30 + activeEnergy * 0.58);
+        (influence * (0.34 + activeEnergy * 0.66) +
+         trailInfluence * 0.30);
 
       vec2 texUV = coverUV(uv);
 
@@ -316,10 +344,14 @@
 
       float pointerChroma =
         influence *
-        (0.0045 + activeEnergy * 0.020);
+        (0.0055 + activeEnergy * 0.022);
+
+      float trailChroma =
+        trailInfluence *
+        (0.003 + u_trailEnergy * 0.010);
 
       float chroma =
-        ambientChroma + pointerChroma;
+        ambientChroma + pointerChroma + trailChroma;
 
       vec2 chromaDir =
         normalize(
@@ -361,14 +393,16 @@
       smear *= 1.0 / 6.0;
 
       float smearMix =
-        influence *
-        activeEnergy *
-        0.58;
+        min(
+          0.72,
+          influence * activeEnergy * 0.66 +
+          trailInfluence * u_trailEnergy * 0.42
+        );
 
       color =
         mix(
           color,
-          max(color, smear * 1.14),
+          max(color, smear * 1.20),
           smearMix
         );
 
@@ -453,8 +487,10 @@
     resolution: loc("u_resolution"),
     textureResolution: loc("u_textureResolution"),
     pointer: loc("u_pointer"),
+    pointerTrail: loc("u_pointerTrail"),
     pointerVelocity: loc("u_pointerVelocity"),
     pointerEnergy: loc("u_pointerEnergy"),
+    trailEnergy: loc("u_trailEnergy"),
     time: loc("u_time"),
     scroll: loc("u_scroll")
   };
@@ -462,9 +498,12 @@
   uniforms = {
     pointerX: 0.5,
     pointerY: 0.5,
+    trailX: 0.5,
+    trailY: 0.5,
     velocityX: 0,
     velocityY: 0,
     energy: 0,
+    trailEnergy: 0,
     scroll: 0,
     textureWidth: 1137,
     textureHeight: 540
@@ -491,6 +530,11 @@
 
     const speed = Math.hypot(vx, vy) * 980;
     uniforms.energy = Math.min(1, 0.22 + speed);
+    uniforms.trailEnergy =
+      Math.max(
+        uniforms.trailEnergy,
+        Math.min(1, 0.16 + speed * 0.82)
+      );
 
     previousPointerX = x;
     previousPointerY = y;
@@ -559,9 +603,20 @@
 
     resize();
 
-    uniforms.energy *= 0.952;
-    uniforms.velocityX *= 0.90;
-    uniforms.velocityY *= 0.90;
+    uniforms.energy *= 0.956;
+    uniforms.trailEnergy *= 0.972;
+
+    /*
+      A delayed pointer wake. Fast enough to follow, slow enough to leave
+      a visible memory of the disturbance.
+    */
+    uniforms.trailX +=
+      (uniforms.pointerX - uniforms.trailX) * 0.075;
+    uniforms.trailY +=
+      (uniforms.pointerY - uniforms.trailY) * 0.075;
+
+    uniforms.velocityX *= 0.91;
+    uniforms.velocityY *= 0.91;
 
     gl.useProgram(program);
     gl.activeTexture(gl.TEXTURE0);
@@ -571,8 +626,10 @@
     gl.uniform2f(u.resolution, canvas.width, canvas.height);
     gl.uniform2f(u.textureResolution, uniforms.textureWidth, uniforms.textureHeight);
     gl.uniform2f(u.pointer, uniforms.pointerX, uniforms.pointerY);
+    gl.uniform2f(u.pointerTrail, uniforms.trailX, uniforms.trailY);
     gl.uniform2f(u.pointerVelocity, uniforms.velocityX, uniforms.velocityY);
     gl.uniform1f(u.pointerEnergy, uniforms.energy);
+    gl.uniform1f(u.trailEnergy, uniforms.trailEnergy);
     gl.uniform1f(u.time, (now - start) / 1000);
     gl.uniform1f(u.scroll, uniforms.scroll);
 
