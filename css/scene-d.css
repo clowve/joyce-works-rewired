@@ -82,12 +82,17 @@
   z-index: 1;
 
   left: 50%;
-  top: 17.4%;
+  top: 50%;
 
-  width: 43.8%;
+  /*
+    Center against the real viewport, not the old 2048 × 972 artboard.
+    The mark scales against whichever dimension is tighter so it stays
+    visually stable across wide, tall and windowed desktop shapes.
+  */
+  width: min(43.8vw, 92dvh);
   height: auto;
 
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
 
   user-select: none;
   pointer-events: none;
