@@ -125,12 +125,12 @@
   left: 47.297992795%;
   top: var(--jw-brand-mark-center-y);
 
-  width: var(--jw-brand-mark-width);
-  height: auto;
+  width: var(--jw-outline-canvas-width);
+  height: var(--jw-outline-canvas-height);
 
   transform: translate(-50%, -50%);
 
-  object-fit: contain;
+  object-fit: fill;
 
   user-select: none;
   pointer-events: none;
