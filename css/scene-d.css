@@ -81,8 +81,8 @@
   position: absolute;
   z-index: 1;
 
-  left: 50%;
-  top: 50%;
+  left: var(--jw-brand-mark-center-x);
+  top: var(--jw-brand-mark-center-y);
 
   /*
     Center against the real viewport, not the old 2048 × 972 artboard.
