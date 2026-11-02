@@ -92,7 +92,7 @@
           class="identity-wipe identity-wipe--wordmark"
           data-identity-wipe
           data-wipe-start="0"
-          data-wipe-end="0.5"
+          data-wipe-end="0.333333"
           aria-hidden="true"
         >
           <div
@@ -116,13 +116,28 @@
         <div
           class="identity-wipe identity-wipe--portrait"
           data-identity-wipe
-          data-wipe-start="0.5"
-          data-wipe-end="1"
+          data-wipe-start="0.333333"
+          data-wipe-end="0.666667"
           aria-hidden="true"
         >
           <div class="identity-wipe-content identity-portrait-state">
             <div class="identity-portrait-mask"></div>
           </div>
+        </div>
+
+        <!--
+          State 4 temporary reference:
+          original finished bio frame, used only to validate the third
+          stationary wipe while the native overlapping composition is built.
+        -->
+        <div
+          class="identity-wipe identity-wipe--bio-reference"
+          data-identity-wipe
+          data-wipe-start="0.666667"
+          data-wipe-end="1"
+          aria-hidden="true"
+        >
+          <div class="identity-wipe-content identity-bio-reference-state"></div>
         </div>
 
       </div>
