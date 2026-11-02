@@ -87,9 +87,11 @@
   height: auto;
 
   transform: translateX(-50%);
-  transform-origin: 50% 50%;
 
   opacity: 0.88;
+
+  filter:
+    drop-shadow(0 0 0.25cqw rgba(245, 90, 147, 0.32));
 
   animation:
     clients-mark-pulse 2.8s ease-in-out infinite;
@@ -101,13 +103,18 @@
 @keyframes clients-mark-pulse {
   0%,
   100% {
-    transform: translateX(-50%) scale(0.992);
-    opacity: 0.68;
+    opacity: 0.72;
+
+    filter:
+      drop-shadow(0 0 0.16cqw rgba(245, 90, 147, 0.24));
   }
 
   50% {
-    transform: translateX(-50%) scale(1.018);
     opacity: 1;
+
+    filter:
+      drop-shadow(0 0 0.72cqw rgba(245, 90, 147, 0.86))
+      drop-shadow(0 0 1.15cqw rgba(245, 90, 147, 0.34));
   }
 }
 
