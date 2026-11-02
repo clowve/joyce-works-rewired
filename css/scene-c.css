@@ -87,10 +87,12 @@
     The old mark was effectively centered in its 2048 × 972 card.
     Keep that visual center, but size against the real viewport.
   */
-  width: var(--jw-brand-mark-width);
-  height: auto;
+  width: var(--jw-outline-canvas-width);
+  height: var(--jw-outline-canvas-height);
 
   transform: translate(-50%, -50%);
+
+  object-fit: fill;
 
   opacity: 0.88;
 
