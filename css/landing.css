@@ -501,10 +501,18 @@ a {
   user-select: none;
 }
 
-.identity-cutout {
+.identity-copy {
   z-index: 4;
 }
 
-.identity-copy {
+.identity-cutout {
   z-index: 5;
+
+  /*
+    The free-standing cutout stops at the bottom of the white strip
+    (695 / 972 of the shared artboard). Below this edge, the portrait
+    is visible only through the underlying JOYCE WORKS photo mask.
+  */
+  -webkit-clip-path: inset(0 0 28.497942387% 0);
+  clip-path: inset(0 0 28.497942387% 0);
 }
