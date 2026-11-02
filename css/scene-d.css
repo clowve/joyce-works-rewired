@@ -89,7 +89,7 @@
     The mark scales against whichever dimension is tighter so it stays
     visually stable across wide, tall and windowed desktop shapes.
   */
-  width: min(43.8vw, 92dvh);
+  width: var(--jw-brand-mark-width);
   height: auto;
 
   transform: translate(-50%, -50%);
