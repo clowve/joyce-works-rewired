@@ -21,14 +21,13 @@
 
   /* ---------------------------------------------------------------------
      Scroll choreography
-     0.00–0.18 ambient/interactive field
-     0.18–0.68 white line draw
+     0.00–0.12 ambient/interactive field
+     0.12–0.72 JOYCE + WORKS draw together as one object
      0.54–0.80 white solid fill resolves underneath
      0.76–1.00 black veil prepares Card 2
      --------------------------------------------------------------------- */
 
   let paths = [];
-  let totalLength = 0;
   let uniforms = null;
 
   fetch("../../assets/identity/joyce-works-outline.svg?v=20261103-pad1")
@@ -44,11 +43,9 @@
       drawHost.replaceChildren(document.importNode(svg, true));
       paths = Array.from(drawHost.querySelectorAll("path"));
 
-      totalLength = 0;
       paths.forEach(path => {
         const length = path.getTotalLength();
         path.dataset.length = String(length);
-        totalLength += length;
         path.style.strokeDasharray = String(length);
         path.style.strokeDashoffset = String(length);
       });
@@ -65,18 +62,20 @@
     const distance = Math.max(1, scrollSection.offsetHeight - vh);
     const progress = clamp01(-rect.top / distance);
 
-    const drawProgress = smooth(0.18, 0.68, progress);
+    const drawProgress = smooth(0.12, 0.72, progress);
     const fillProgress = smooth(0.54, 0.80, progress);
     const veilProgress = smooth(0.76, 1.00, progress);
 
-    if (paths.length && totalLength > 0) {
-      let remaining = totalLength * drawProgress;
-
+    /*
+      JOYCE and WORKS are one identity object. Both compound paths draw
+      through the same normalized progress instead of one waiting for
+      the other to finish.
+    */
+    if (paths.length) {
       paths.forEach(path => {
         const length = Number(path.dataset.length) || 1;
-        const shown = Math.min(length, Math.max(0, remaining));
-        path.style.strokeDashoffset = String(length - shown);
-        remaining -= length;
+        path.style.strokeDashoffset =
+          String(length * (1 - drawProgress));
       });
     }
 
@@ -181,52 +180,155 @@
       mp.x *= aspect;
 
       float dist = distance(p, mp);
-      float radius = mix(0.19, 0.28, min(1.0, u_pointerEnergy));
-      float influence = smoothstep(radius, 0.0, dist);
-
-      /* Ambient crystalline movement: mostly vertical shard offsets. */
-      float bandCount = 13.0;
-      float band = floor(uv.x * bandCount);
-      float bandSeed = hash11(band + 17.0);
-
-      float wave =
-        sin(u_time * (0.32 + bandSeed * 0.38) + band * 1.71) *
-        (0.003 + bandSeed * 0.007);
-
-      uv.y += wave;
-
-      /* Rare glitch spikes are already present before interaction. */
-      float glitchClock = floor(u_time * 1.15);
-      float glitchSeed = hash11(glitchClock * 4.71);
-      float glitchGate = smoothstep(0.82, 0.97, glitchSeed);
-      float stripe = floor(uv.y * 19.0);
-      float stripeSeed = hash11(stripe + glitchClock * 13.0);
-
-      uv.x +=
-        (stripeSeed - 0.5) *
-        glitchGate *
-        (0.008 + 0.018 * hash11(stripe + 2.0));
-
-      /* Local pointer refraction + velocity smear. */
-      vec2 pointerDelta = uv - u_pointer;
-      vec2 radial = normalize(pointerDelta + vec2(0.00001));
-
-      float velocityMag = min(1.0, length(u_pointerVelocity) * 24.0);
+      float velocityMag = min(1.0, length(u_pointerVelocity) * 28.0);
       float activeEnergy = max(u_pointerEnergy, velocityMag);
 
-      uv += radial * influence * (0.010 + activeEnergy * 0.018);
-      uv -= u_pointerVelocity * influence * (0.20 + activeEnergy * 0.32);
+      /*
+        Larger cursor field than V1. This is intentionally broad so the
+        interaction reads as a disruption in the image rather than a
+        small lens/pinch.
+      */
+      float radius = mix(0.34, 0.46, activeEnergy);
+      float influence = smoothstep(radius, radius * 0.16, dist);
+
+      /*
+        Continuous ambient motion:
+        several independently moving vertical/diagonal shard systems.
+        Nothing waits for a discrete glitch event; the image is always
+        sliding, shearing and misregistering a little.
+      */
+      float bandA = floor(uv.x * 11.0);
+      float bandB = floor((uv.x + uv.y * 0.22) * 19.0);
+      float stripe = floor(uv.y * 17.0);
+
+      float seedA = hash11(bandA + 3.7);
+      float seedB = hash11(bandB + 11.2);
+      float seedS = hash11(stripe + 29.4);
+
+      float driftA =
+        sin(u_time * (0.42 + seedA * 0.24) + seedA * 6.28318);
+      float driftB =
+        sin(u_time * (0.28 + seedB * 0.31) + seedB * 9.73);
+      float driftS =
+        sin(u_time * (0.55 + seedS * 0.20) + seedS * 5.11);
+
+      vec2 ambientOffset = vec2(
+        driftB * (0.004 + seedB * 0.010) +
+        driftS * (0.002 + seedS * 0.006),
+        driftA * (0.006 + seedA * 0.013)
+      );
+
+      /*
+        Smooth glitch surges ride on top of the continuous movement.
+        They ramp in/out rather than popping between static states.
+      */
+      float surgeA =
+        smoothstep(
+          0.62,
+          0.98,
+          0.5 + 0.5 * sin(u_time * 1.13 + bandB * 0.91)
+        );
+
+      float surgeB =
+        smoothstep(
+          0.76,
+          0.995,
+          0.5 + 0.5 * sin(u_time * 0.73 + stripe * 1.37 + 1.4)
+        );
+
+      ambientOffset.x +=
+        (seedS - 0.5) *
+        surgeA *
+        (0.008 + seedS * 0.014);
+
+      ambientOffset.y +=
+        (seedB - 0.5) *
+        surgeB *
+        (0.004 + seedB * 0.009);
+
+      uv += ambientOffset;
+
+      /*
+        Cursor disruption:
+        use local horizontal slices + directional shear, not radial
+        refraction. Fast motion increases the displacement and gives
+        the cursor a sharper tearing quality.
+      */
+      float localStripe =
+        floor((uv.y + u_time * 0.018) * 24.0);
+
+      float localSeed =
+        hash11(localStripe + floor(u_pointer.y * 37.0));
+
+      float sliceMotion =
+        sin(
+          u_time * (1.10 + localSeed * 0.90) +
+          localStripe * 0.77
+        );
+
+      vec2 velocityDir =
+        normalize(u_pointerVelocity + vec2(0.0001, 0.0001));
+
+      vec2 perpendicular =
+        vec2(-velocityDir.y, velocityDir.x);
+
+      float tearStrength =
+        influence *
+        (0.018 + activeEnergy * 0.050);
+
+      uv.x +=
+        (localSeed - 0.5) *
+        sliceMotion *
+        tearStrength;
+
+      uv +=
+        velocityDir *
+        influence *
+        activeEnergy *
+        0.024;
+
+      uv +=
+        perpendicular *
+        influence *
+        (localSeed - 0.5) *
+        activeEnergy *
+        0.018;
+
+      /*
+        Drag the sampled texture behind cursor motion. This creates the
+        light-smear feeling without turning the whole field into liquid.
+      */
+      uv -=
+        u_pointerVelocity *
+        influence *
+        (0.30 + activeEnergy * 0.58);
 
       vec2 texUV = coverUV(uv);
 
-      /* Chromatic aberration grows with pointer speed and ambient spikes. */
+      /*
+        Chromatic misregistration is always faintly present, then grows
+        through ambient surges and cursor velocity.
+      */
+      float ambientChroma =
+        0.0022 +
+        surgeA * 0.0026 +
+        abs(driftB) * 0.0017;
+
+      float pointerChroma =
+        influence *
+        (0.0045 + activeEnergy * 0.020);
+
       float chroma =
-        0.0015 +
-        glitchGate * 0.003 +
-        influence * (0.003 + activeEnergy * 0.012);
+        ambientChroma + pointerChroma;
 
       vec2 chromaDir =
-        normalize(u_pointerVelocity + vec2(0.0001, 0.0001));
+        normalize(
+          u_pointerVelocity +
+          vec2(
+            0.18 + driftB * 0.12,
+            0.04 + driftA * 0.07
+          )
+        );
 
       vec2 cOffset = chromaDir * chroma;
 
@@ -236,39 +338,63 @@
 
       vec3 color = vec3(r, g, b);
 
-      /* Light smear: a few samples dragged along the movement vector. */
+      /*
+        Directional light smear. Strongest with faster cursor movement;
+        the background animation still runs independently underneath.
+      */
       vec3 smear = vec3(0.0);
-      for (int i = 1; i <= 4; i++) {
+      for (int i = 1; i <= 6; i++) {
         float fi = float(i);
         vec2 smearUV =
           uv -
           u_pointerVelocity *
           influence *
-          (0.16 * fi);
+          (0.13 * fi);
 
-        smear += texture(u_texture, coverUV(smearUV)).rgb;
+        smear +=
+          texture(
+            u_texture,
+            coverUV(smearUV)
+          ).rgb;
       }
-      smear *= 0.25;
+
+      smear *= 1.0 / 6.0;
 
       float smearMix =
         influence *
         activeEnergy *
-        0.42;
+        0.58;
 
-      color = mix(color, max(color, smear * 1.10), smearMix);
+      color =
+        mix(
+          color,
+          max(color, smear * 1.14),
+          smearMix
+        );
 
-      /* Tiny print/noise character so the image never feels perfectly digital. */
+      /* Fine print/noise character. */
       float grain =
-        hash21(gl_FragCoord.xy + floor(u_time * 18.0)) - 0.5;
+        hash21(
+          gl_FragCoord.xy +
+          vec2(
+            floor(u_time * 16.0),
+            floor(u_time * 11.0)
+          )
+        ) - 0.5;
 
-      color += grain * 0.018;
+      color += grain * 0.015;
 
-      /* Slightly deepen contrast as the black handoff approaches. */
-      color *= mix(1.0, 0.88, smoothstep(0.76, 1.0, u_scroll));
+      /* Keep the already-approved handoff timing unchanged. */
+      color *=
+        mix(
+          1.0,
+          0.88,
+          smoothstep(0.76, 1.0, u_scroll)
+        );
 
       outColor = vec4(color, 1.0);
     }
-  `;
+  `
 
   function compile(type, source) {
     const shader = gl.createShader(type);
@@ -363,8 +489,8 @@
     uniforms.velocityX = vx * 16;
     uniforms.velocityY = vy * 16;
 
-    const speed = Math.hypot(vx, vy) * 850;
-    uniforms.energy = Math.min(1, 0.18 + speed);
+    const speed = Math.hypot(vx, vy) * 980;
+    uniforms.energy = Math.min(1, 0.22 + speed);
 
     previousPointerX = x;
     previousPointerY = y;
@@ -433,9 +559,9 @@
 
     resize();
 
-    uniforms.energy *= 0.935;
-    uniforms.velocityX *= 0.88;
-    uniforms.velocityY *= 0.88;
+    uniforms.energy *= 0.952;
+    uniforms.velocityX *= 0.90;
+    uniforms.velocityY *= 0.90;
 
     gl.useProgram(program);
     gl.activeTexture(gl.TEXTURE0);
