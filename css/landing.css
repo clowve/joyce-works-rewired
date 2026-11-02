@@ -261,18 +261,8 @@ a {
 .identity-opening {
   z-index: 1;
 
-  background-color: var(--jw-black);
-  background-image:
-    url("../assets/identity/landing-opener-placeholder.webp");
-
-  background-position: center center;
-  background-repeat: no-repeat;
-
-  /*
-    The opener is abstract edge-to-edge artwork. Let it behave like a
-    modern hero background instead of preserving the old fixed poster box.
-  */
-  background-size: cover;
+  overflow: hidden;
+  background: var(--jw-black);
 }
 
 /*
@@ -588,4 +578,24 @@ a {
 
   user-select: none;
   pointer-events: none;
+}
+
+
+.identity-opening-art {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+  object-position: center center;
+
+  user-select: none;
+  pointer-events: none;
+}
+
+.identity-opening-mark {
+  z-index: 2;
 }
