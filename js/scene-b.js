@@ -48,7 +48,7 @@
 
     if (disciplinesStage) {
       var entranceProgress =
-        clamp01(progress / 0.25);
+        clamp01(progress / 0.2);
 
       var entranceHidden =
         (1 - entranceProgress) * 100;
