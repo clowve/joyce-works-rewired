@@ -11,7 +11,7 @@
     content="Staging rebuild of the Joyce Works landing experience."
   >
 
-  <link rel="stylesheet" href="css/landing.css?v=20261102-identity4">
+  <link rel="stylesheet" href="css/landing.css?v=20261102-nativebio1">
 </head>
 
 <body>
@@ -121,7 +121,15 @@
           aria-hidden="true"
         >
           <div class="identity-wipe-content identity-portrait-state">
-            <div class="identity-portrait-mask"></div>
+            <div class="identity-artboard" aria-hidden="true">
+              <div class="identity-photo-mark">
+                <img
+                  class="identity-photo-source"
+                  src="assets/identity/portrait-full.webp"
+                  alt=""
+                >
+              </div>
+            </div>
           </div>
         </div>
 
@@ -137,7 +145,37 @@
           data-wipe-end="1"
           aria-hidden="true"
         >
-          <div class="identity-wipe-content identity-bio-reference-state"></div>
+          <div class="identity-wipe-content identity-bio-state">
+            <div class="identity-artboard" aria-hidden="true">
+              <div class="identity-photo-mark identity-photo-mark--bio">
+                <img
+                  class="identity-photo-source"
+                  src="assets/identity/portrait-full.webp"
+                  alt=""
+                >
+              </div>
+
+              <div class="identity-white-strip"></div>
+
+              <img
+                class="identity-outline-mark"
+                src="assets/identity/joyce-works-outline.svg"
+                alt=""
+              >
+
+              <img
+                class="identity-cutout"
+                src="assets/identity/portrait-cutout.webp"
+                alt=""
+              >
+
+              <img
+                class="identity-copy"
+                src="assets/identity/identity-copy.svg"
+                alt=""
+              >
+            </div>
+          </div>
         </div>
 
       </div>
@@ -165,6 +203,6 @@
     ></section>
   </main>
 
-  <script src="js/landing.js?v=20261102-identity4"></script>
+  <script src="js/landing.js?v=20261102-nativebio1"></script>
 </body>
 </html>
