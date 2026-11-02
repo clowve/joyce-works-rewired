@@ -22,9 +22,9 @@
   /* ---------------------------------------------------------------------
      Scroll choreography
      0.00–0.12 ambient/interactive field
-     0.03–0.995 JOYCE + WORKS draw together as one object
-     0.54–0.80 white solid fill resolves underneath
-     0.76–1.00 black veil prepares Card 2
+     0.02–0.985 JOYCE + WORKS draw together, strongly back-loaded
+     0.82–0.965 white solid fill resolves underneath
+     0.90–1.00 black veil prepares Card 2
      --------------------------------------------------------------------- */
 
   let paths = [];
@@ -62,9 +62,10 @@
     const distance = Math.max(1, scrollSection.offsetHeight - vh);
     const progress = clamp01(-rect.top / distance);
 
-    const drawProgress = smooth(0.03, 0.995, progress);
-    const fillProgress = smooth(0.54, 0.80, progress);
-    const veilProgress = smooth(0.76, 1.00, progress);
+    const drawLinear = smooth(0.02, 0.985, progress);
+    const drawProgress = Math.pow(drawLinear, 4);
+    const fillProgress = smooth(0.82, 0.965, progress);
+    const veilProgress = smooth(0.90, 1.00, progress);
 
     /*
       JOYCE and WORKS are one identity object. Both compound paths draw
@@ -135,8 +136,8 @@
     uniform vec2 u_pointer;
     uniform vec2 u_pointerVelocity;
     uniform float u_pointerEnergy;
-    uniform vec2 u_trailPoints[6];
-    uniform float u_trailStrengths[6];
+    uniform vec2 u_trailPoints[12];
+    uniform float u_trailStrengths[12];
     uniform float u_time;
     uniform float u_scroll;
 
@@ -187,7 +188,7 @@
         Cursor stays concentrated and feathered. V5 deliberately avoids
         broad liquid displacement.
       */
-      float radius = mix(0.125, 0.17, activeEnergy);
+      float radius = mix(0.105, 0.145, activeEnergy);
       float dist = distance(p, mp);
       float influence =
         1.0 - smoothstep(radius * 0.18, radius, dist);
@@ -226,21 +227,21 @@
         smoothstep(
           0.54,
           0.98,
-          0.5 + 0.5 * sin(t * 4.8)
+          0.5 + 0.5 * sin(t * 6.6)
         );
 
       float pulseB =
         smoothstep(
           0.60,
           0.995,
-          0.5 + 0.5 * sin(t * 6.7 + 1.8)
+          0.5 + 0.5 * sin(t * 8.9 + 1.8)
         );
 
       float pulseC =
         smoothstep(
           0.64,
           0.99,
-          0.5 + 0.5 * sin(t * 3.9 + 4.2)
+          0.5 + 0.5 * sin(t * 5.7 + 4.2)
         );
 
       /*
@@ -296,6 +297,54 @@
         0.31 * pulseB +
         0.17 * pulseC;
 
+      /*
+        Thin geometric signal artifacts around the cursor. These are
+        directional lines/fragments, not a grid, so they add a synthetic
+        glitch vocabulary without bringing back the old tiled windows.
+      */
+      float cursorLineA =
+        pow(
+          max(
+            0.0,
+            sin(
+              uv.y * 86.0 +
+              uv.x * 7.0 +
+              t * 6.3
+            )
+          ),
+          18.0
+        );
+
+      float cursorLineB =
+        pow(
+          max(
+            0.0,
+            sin(
+              (uv.y - uv.x * 0.34) * 61.0 -
+              t * 5.1 +
+              1.7
+            )
+          ),
+          22.0
+        );
+
+      float cursorArtifact =
+        influence *
+        min(
+          1.0,
+          cursorLineA * (0.45 + pulseA) +
+          cursorLineB * (0.35 + pulseB)
+        );
+
+      uv.x +=
+        cursorArtifact *
+        (0.018 + activeEnergy * 0.036);
+
+      uv.y +=
+        cursorArtifact *
+        sin(t * 7.2 + uv.x * 31.0) *
+        0.006;
+
       uv.x +=
         localSignal *
         influence *
@@ -324,7 +373,7 @@
       float memory = 0.0;
       vec2 memoryShift = vec2(0.0);
 
-      for (int i = 0; i < 6; i++) {
+      for (int i = 0; i < 12; i++) {
         vec2 hp = u_trailPoints[i];
         hp.x *= aspect;
 
@@ -348,7 +397,7 @@
         memoryShift.x +=
           phase *
           hi *
-          (0.012 + hs * 0.018);
+          (0.020 + hs * 0.030);
 
         memoryShift.y +=
           sin(
@@ -357,7 +406,7 @@
             float(i)
           ) *
           hi *
-          0.005;
+          0.008;
       }
 
       memory = min(1.0, memory);
@@ -377,10 +426,11 @@
 
       float pointerChroma =
         influence *
-        (0.006 + activeEnergy * 0.026);
+        (0.008 + activeEnergy * 0.032) +
+        cursorArtifact * 0.018;
 
       float memoryChroma =
-        memory * 0.012;
+        memory * 0.020;
 
       float chroma =
         ambientChroma +
@@ -460,6 +510,21 @@
           smearMix
         );
 
+      /*
+        A few hard-edged luminous fragments make the cursor read as an
+        actual glitch source instead of only a distortion source.
+      */
+      float artifactBrightness =
+        cursorArtifact * (0.12 + activeEnergy * 0.16) +
+        memory * 0.045;
+
+      color +=
+        vec3(
+          artifactBrightness * 0.82,
+          artifactBrightness * 0.92,
+          artifactBrightness
+        );
+
       float grain =
         hash21(
           gl_FragCoord.xy +
@@ -471,12 +536,12 @@
 
       color += grain * 0.014;
 
-      /* Approved handoff timing stays unchanged. */
+      /* Handoff remains compressed at the end so the slower trace has room. */
       color *=
         mix(
           1.0,
           0.88,
-          smoothstep(0.76, 1.0, u_scroll)
+          smoothstep(0.90, 1.0, u_scroll)
         );
 
       outColor = vec4(color, 1.0);
@@ -565,7 +630,7 @@
   let previousPointerY = 0.5;
   let lastPointerTime = performance.now();
 
-  const TRAIL_COUNT = 6;
+  const TRAIL_COUNT = 12;
   const trailPoints = new Float32Array(TRAIL_COUNT * 2);
   const trailStrengths = new Float32Array(TRAIL_COUNT);
 
@@ -578,7 +643,7 @@
   let lastTrailStamp = 0;
 
   function pushTrailPoint(x, y, strength, now) {
-    if (now - lastTrailStamp < 52) return;
+    if (now - lastTrailStamp < 92) return;
 
     for (let i = TRAIL_COUNT - 1; i > 0; i--) {
       trailPoints[i * 2] = trailPoints[(i - 1) * 2];
@@ -699,7 +764,7 @@
       before fading, giving the image a real memory of the cursor path.
     */
     for (let i = 0; i < TRAIL_COUNT; i++) {
-      trailStrengths[i] *= 0.994;
+      trailStrengths[i] *= 0.998;
       if (trailStrengths[i] < 0.004) {
         trailStrengths[i] = 0;
       }
