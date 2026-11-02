@@ -80,8 +80,8 @@
   position: absolute;
   z-index: 1;
 
-  left: 50%;
-  top: 52.7%;
+  left: var(--jw-brand-mark-center-x);
+  top: var(--jw-brand-mark-center-y);
 
   /*
     The old mark was effectively centered in its 2048 × 972 card.
