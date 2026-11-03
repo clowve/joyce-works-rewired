@@ -353,16 +353,16 @@
         layered counter-moving shards.
       */
       /*
-        V27 SECONDARY REFRACTION TUNING:
-        one diagonal coordinate now owns angle, spacing, motion,
-        refraction phase and mask placement. This removes the accidental
-        second-angle family introduced in V26.
+        V28 SECONDARY REFRACTION TUNING:
+        the smooth refraction grid now shares the SAME visual diagonal
+        axis as the hard-slice/glitch bars. The layers remain functionally
+        separate, but there is only one visible angle family.
 
         Main bands use one fixed width and one fixed gap. Hairlines sit
         inside those gaps and never change the underlying cadence.
       */
       float diagonalCoord =
-        (uv.x - uv.y * 0.62) * 5.6 +
+        (uv.x - uv.y * 0.37) * 5.6 +
         t * 2.18;
 
       float diagonalId =
