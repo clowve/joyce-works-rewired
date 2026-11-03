@@ -400,51 +400,184 @@
         );
 
       /*
-        V17 HARD-SLICE LAYER:
-        only this plane changes. The approved smooth background and
-        smooth diagonal refraction layers remain untouched.
+        V19 HARD-SLICE LAYER:
+        preserve V17/V18's angle and continuous bars, but break the
+        fence-like regularity. Most bars are finer, some cells open into
+        wider negative space, and a few retain the heavier V18 weight.
 
-        Continuous hard bars, rotated ~7 degrees counter-clockwise.
-        Bar width and negative space are now intentionally near-equal
-        (roughly 48/52) so the cadence reads as bars rather than stripes
-        separated by oversized gaps.
+        The horizontal middle becomes a safe-ish zone: a denser family
+        of finer bars replaces the heavier outer rhythm around the logo.
+        Autonomous glitch timing remains untouched.
       */
       float sliceTravel =
         uv.x -
         uv.y * 0.37 +
         t * 0.30;
 
-      float sliceCell =
-        fract(
-          sliceTravel * 5.0
+      /*
+        OUTER RHYTHM:
+        variable-width bars in equal coordinate cells. Most stay slim;
+        occasional bars inherit something close to the V18 thickness,
+        while a small number of cells are skipped to create wider gaps.
+      */
+      float outerCoord =
+        sliceTravel * 6.0;
+
+      float outerId =
+        floor(outerCoord);
+
+      float outerCell =
+        fract(outerCoord);
+
+      float outerRand =
+        hash11(
+          outerId + 13.7
         );
 
-      float sliceBand =
+      float outerRandB =
+        hash11(
+          outerId * 1.73 + 31.1
+        );
+
+      float outerWidth =
+        mix(
+          0.15,
+          0.28,
+          outerRand
+        ) +
         step(
-          0.04,
-          sliceCell
+          0.82,
+          outerRandB
+        ) * 0.20;
+
+      float outerStart =
+        0.04 +
+        outerRandB * 0.10;
+
+      float outerEnd =
+        min(
+          0.96,
+          outerStart + outerWidth
+        );
+
+      float outerBand =
+        step(
+          outerStart,
+          outerCell
         ) *
         (
           1.0 -
           step(
-            0.52,
-            sliceCell
+            outerEnd,
+            outerCell
+          )
+        );
+
+      float outerKeep =
+        step(
+          0.14,
+          hash11(
+            outerId * 2.11 + 5.0
+          )
+        );
+
+      outerBand *=
+        outerKeep;
+
+      /*
+        CENTER SAFE ZONE:
+        higher-frequency, consistently finer bars through the middle.
+        The transition is broad enough to feel compositional rather than
+        like a literal horizontal mask.
+      */
+      float centerDistance =
+        abs(
+          uv.y - 0.5
+        );
+
+      float centerFine =
+        1.0 -
+        smoothstep(
+          0.115,
+          0.235,
+          centerDistance
+        );
+
+      float fineCoord =
+        sliceTravel * 9.0;
+
+      float fineId =
+        floor(fineCoord);
+
+      float fineCell =
+        fract(fineCoord);
+
+      float fineRand =
+        hash11(
+          fineId + 51.0
+        );
+
+      float fineRandB =
+        hash11(
+          fineId * 2.31 + 8.0
+        );
+
+      float fineWidth =
+        mix(
+          0.11,
+          0.20,
+          fineRand
+        );
+
+      float fineStart =
+        0.045 +
+        fineRandB * 0.055;
+
+      float fineEnd =
+        min(
+          0.94,
+          fineStart + fineWidth
+        );
+
+      float fineBand =
+        step(
+          fineStart,
+          fineCell
+        ) *
+        (
+          1.0 -
+          step(
+            fineEnd,
+            fineCell
           )
         );
 
       /*
-        Keep the slice bars continuous along their length. V14 multiplied
-        by a second along-strip gate, which is what made them read as
-        dashes rather than uninterrupted refractive bars.
+        Keep the slice bars continuous along their length. Only their
+        thickness/spacing family changes across the horizontal field.
       */
       float sliceMask =
-        sliceBand;
+        mix(
+          outerBand,
+          fineBand,
+          centerFine
+        );
+
+      float outerJitter =
+        hash11(
+          outerId
+        );
+
+      float fineJitter =
+        hash11(
+          fineId + 71.0
+        );
 
       float sliceJitter =
-        hash11(
-          floor(
-            sliceTravel * 5.0
-          )
+        mix(
+          outerJitter,
+          fineJitter,
+          centerFine
         );
 
       /*
