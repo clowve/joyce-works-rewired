@@ -122,7 +122,7 @@
       still resolving.
     */
     const fillProgress =
-      smooth(0.74, 0.93, drawProgress);
+      smooth(0.56, 0.84, drawProgress);
 
     const veilProgress =
       smooth(0.91, 1.00, progress);
@@ -148,7 +148,7 @@
       exactly the same.
     */
     drawHost.style.opacity =
-      String(1 - smooth(0.10, 0.98, fillProgress));
+      String(1 - smooth(0.18, 0.92, fillProgress));
 
     veil.style.opacity = String(veilProgress * 0.98);
 
@@ -369,10 +369,10 @@
       vec2 diagonalUV =
         signalUV +
         vec2(
-          -0.024 -
-            diagonalGate * 0.020 +
-            diagonalPhase * 0.010,
-          diagonalPhase * 0.0045
+          -0.034 -
+            diagonalGate * 0.028 +
+            diagonalPhase * 0.014,
+          diagonalPhase * 0.0065
         );
 
       float diagonalMix =
@@ -391,7 +391,7 @@
         mix(
           signalUV,
           diagonalUV,
-          diagonalMix * 0.42
+          diagonalMix * 0.54
         );
 
       /*
@@ -586,7 +586,7 @@
       float chroma =
         0.0038 +
         ambientGlitch * 0.0046 +
-        diagonalMix * 0.0024 +
+        diagonalMix * 0.0046 +
         cursorInfluence *
           (0.016 + activeEnergy * 0.042) +
         memory * 0.026 +
@@ -641,6 +641,25 @@
           leftColor,
           rightColor,
           currentMix
+        );
+
+      /*
+        Explicit secondary refraction plane. Previously diagonalUV only
+        influenced signalUV, then got diluted by the left/right rebuild.
+        Sampling it as its own layer makes the counter-moving diagonal
+        refraction visibly distinct.
+      */
+      vec3 diagonalColor =
+        texture(
+          u_texture,
+          coverUV(diagonalUV)
+        ).rgb;
+
+      baseColor =
+        mix(
+          baseColor,
+          diagonalColor,
+          diagonalMix * 0.34
         );
 
       float r =
