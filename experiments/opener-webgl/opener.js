@@ -13,6 +13,25 @@
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reducedMotion) return;
 
+  /*
+    V29 grading is intentionally independent from all motion grammar.
+    URL options:
+      ?grade=off  -> exact V28 color treatment
+      ?grade=a    -> restrained vibrancy lift (default)
+      ?grade=b    -> bolder reference-seeking lift
+  */
+  const gradeParam =
+    new URLSearchParams(window.location.search)
+      .get("grade")
+      ?.toLowerCase();
+
+  const gradeMode =
+    gradeParam === "off"
+      ? 0
+      : gradeParam === "b"
+        ? 2
+        : 1;
+
   const clamp01 = v => Math.max(0, Math.min(1, v));
   const smooth = (a, b, v) => {
     const t = clamp01((v - a) / Math.max(0.00001, b - a));
@@ -208,6 +227,7 @@
     uniform float u_pointerEnergy;
     uniform float u_time;
     uniform float u_scroll;
+    uniform float u_gradeMode;
 
     in vec2 v_uv;
     out vec4 outColor;
@@ -230,6 +250,85 @@
       float f = fract(x);
       float u = f * f * (3.0 - 2.0 * f);
       return mix(hash11(i), hash11(i + 1.0), u);
+    }
+
+    vec3 gradeVibrance(
+      vec3 c,
+      float saturation,
+      float contrast,
+      float highlightLift,
+      float cyanBias,
+      float magentaBias
+    ) {
+      float luma =
+        dot(
+          c,
+          vec3(0.2126, 0.7152, 0.0722)
+        );
+
+      /*
+        Saturation is anchored to luminance so the grade enriches the
+        source rather than simply multiplying channel values.
+      */
+      c =
+        mix(
+          vec3(luma),
+          c,
+          saturation
+        );
+
+      /*
+        Soft contrast around a slightly lowered pivot keeps the dark
+        field deep while allowing the electric colors to separate.
+      */
+      c =
+        (c - 0.46) *
+        contrast +
+        0.46;
+
+      /*
+        Luma-driven highlight energy: not a blur/bloom pass, but enough
+        emissive lift to recover some of the luminous GIF character.
+      */
+      float highlight =
+        smoothstep(
+          0.48,
+          0.94,
+          luma
+        );
+
+      c +=
+        c *
+        highlight *
+        highlightLift;
+
+      /*
+        Small palette bias toward the cyan / magenta energy visible in
+        the original opener language. Kept luma-weighted so neutrals do
+        not become globally tinted.
+      */
+      float chroma =
+        max(c.r, max(c.g, c.b)) -
+        min(c.r, min(c.g, c.b));
+
+      float colorGate =
+        smoothstep(
+          0.08,
+          0.46,
+          chroma
+        );
+
+      c.gb +=
+        vec2(0.50, 0.82) *
+        cyanBias *
+        colorGate;
+
+      c.rb +=
+        vec2(0.86, 0.48) *
+        magentaBias *
+        colorGate;
+
+      return clamp(c, 0.0, 1.0);
     }
 
     vec2 coverUV(vec2 uv) {
@@ -1352,6 +1451,50 @@
           smearMix * 0.78
         );
 
+      /*
+        V29 COLOR-RICHNESS PASS.
+        IMPORTANT: this is downstream of every UV/motion calculation.
+        It cannot alter V28 motion grammar, slice spacing, diagonal
+        cadence, cursor behavior or logo choreography.
+
+        mode 0 = V28 untouched
+        mode 1 = A / restrained vibrancy
+        mode 2 = B / bolder, more luminous
+      */
+      if (u_gradeMode > 0.5) {
+        if (u_gradeMode > 1.5) {
+          color =
+            gradeVibrance(
+              color,
+              1.34,
+              1.16,
+              0.18,
+              0.030,
+              0.025
+            );
+
+          /*
+            Slight black-floor shaping for B: retain deep blacks while
+            allowing colored mids/highlights to feel more electric.
+          */
+          color =
+            pow(
+              max(color, vec3(0.0)),
+              vec3(0.94)
+            );
+        } else {
+          color =
+            gradeVibrance(
+              color,
+              1.18,
+              1.09,
+              0.095,
+              0.014,
+              0.012
+            );
+        }
+      }
+
       float grain =
         hash21(
           gl_FragCoord.xy +
@@ -1440,7 +1583,8 @@
     pointerVelocity: loc("u_pointerVelocity"),
     pointerEnergy: loc("u_pointerEnergy"),
     time: loc("u_time"),
-    scroll: loc("u_scroll")
+    scroll: loc("u_scroll"),
+    gradeMode: loc("u_gradeMode")
   };
 
   uniforms = {
@@ -1819,6 +1963,11 @@
     gl.uniform1f(
       u.scroll,
       uniforms.scroll
+    );
+
+    gl.uniform1f(
+      u.gradeMode,
+      gradeMode
     );
 
     gl.drawArrays(
