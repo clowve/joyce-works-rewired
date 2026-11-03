@@ -16,8 +16,8 @@
   /*
     V29 grading is intentionally independent from all motion grammar.
     URL options:
-      ?grade=off  -> exact V28 color treatment
-      ?grade=a    -> restrained vibrancy lift (default)
+      default     -> raw V30 procedural source
+      ?grade=a    -> restrained vibrancy lift
       ?grade=b    -> bolder reference-seeking lift
   */
   const gradeParam =
@@ -26,11 +26,11 @@
       ?.toLowerCase();
 
   const gradeMode =
-    gradeParam === "off"
-      ? 0
+    gradeParam === "a"
+      ? 1
       : gradeParam === "b"
         ? 2
-        : 1;
+        : 0;
 
   const clamp01 = v => Math.max(0, Math.min(1, v));
   const smooth = (a, b, v) => {
@@ -329,6 +329,568 @@
         colorGate;
 
       return clamp(c, 0.0, 1.0);
+    }
+
+    float noise2(vec2 p) {
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+
+      f =
+        f * f *
+        (3.0 - 2.0 * f);
+
+      float a =
+        hash21(i);
+
+      float b =
+        hash21(
+          i + vec2(1.0, 0.0)
+        );
+
+      float c =
+        hash21(
+          i + vec2(0.0, 1.0)
+        );
+
+      float d =
+        hash21(
+          i + vec2(1.0, 1.0)
+        );
+
+      return mix(
+        mix(a, b, f.x),
+        mix(c, d, f.x),
+        f.y
+      );
+    }
+
+    float fbm(vec2 p) {
+      float value = 0.0;
+      float amp = 0.52;
+
+      for (int i = 0; i < 4; i++) {
+        value +=
+          noise2(p) * amp;
+
+        p =
+          mat2(
+            1.62, -1.18,
+            1.18,  1.62
+          ) *
+          p +
+          vec2(2.13, 1.37);
+
+        amp *= 0.48;
+      }
+
+      return value;
+    }
+
+    float shardMask(
+      vec2 q,
+      float count,
+      float slant,
+      float seed,
+      float minWidth,
+      float maxWidth
+    ) {
+      float bend =
+        (
+          noise2(
+            vec2(
+              q.y * 3.6,
+              seed * 0.37
+            )
+          ) - 0.5
+        ) * 0.16;
+
+      float coord =
+        (
+          q.x +
+          q.y * slant +
+          bend
+        ) *
+        count;
+
+      float id =
+        floor(coord);
+
+      float cell =
+        fract(coord);
+
+      float center =
+        0.50 +
+        (
+          hash11(
+            id * 1.71 + seed
+          ) - 0.5
+        ) * 0.34;
+
+      float width =
+        mix(
+          minWidth,
+          maxWidth,
+          hash11(
+            id * 2.19 + seed * 1.83
+          )
+        );
+
+      /*
+        Low-frequency edge wander makes the silhouettes crystalline and
+        irregular rather than perfectly striped.
+      */
+      float edgeWarp =
+        (
+          noise2(
+            vec2(
+              q.y * 8.0 +
+                id * 0.17,
+              seed
+            )
+          ) - 0.5
+        ) * 0.085;
+
+      float dist =
+        abs(
+          cell -
+          center +
+          edgeWarp
+        );
+
+      float ribbon =
+        1.0 -
+        smoothstep(
+          width,
+          width + 0.028,
+          dist
+        );
+
+      /*
+        Segment/taper the long ribbons so they form overlapping shard
+        masses instead of running uninterrupted through the whole frame.
+      */
+      float segmentScale =
+        mix(
+          1.45,
+          2.65,
+          hash11(
+            id + seed * 3.1
+          )
+        );
+
+      float yCell =
+        fract(
+          q.y * segmentScale +
+          hash11(
+            id * 4.3 + seed
+          )
+        );
+
+      float taper =
+        1.0 -
+        smoothstep(
+          0.33,
+          0.50,
+          abs(
+            yCell - 0.5
+          )
+        );
+
+      return ribbon *
+        mix(
+          0.42,
+          1.0,
+          taper
+        );
+    }
+
+    vec3 proceduralSource(vec2 q) {
+      /*
+        V30 PROCEDURAL SOURCE FIELD.
+        Reference-driven palette, but no sampled artwork:
+        near-black violet, cobalt/electric blue, violet, hot magenta
+        and pink-red shard cores.
+      */
+      vec3 ink =
+        vec3(
+          0.018,
+          0.004,
+          0.030
+        );
+
+      vec3 deepBlue =
+        vec3(
+          0.035,
+          0.105,
+          0.52
+        );
+
+      vec3 electricBlue =
+        vec3(
+          0.055,
+          0.32,
+          0.96
+        );
+
+      vec3 violet =
+        vec3(
+          0.46,
+          0.22,
+          0.92
+        );
+
+      vec3 purple =
+        vec3(
+          0.55,
+          0.08,
+          0.64
+        );
+
+      vec3 magenta =
+        vec3(
+          0.985,
+          0.075,
+          0.67
+        );
+
+      vec3 hotPink =
+        vec3(
+          1.00,
+          0.075,
+          0.34
+        );
+
+      vec3 lavender =
+        vec3(
+          0.55,
+          0.42,
+          1.00
+        );
+
+      float broad =
+        fbm(
+          q * vec2(2.15, 1.55) +
+          vec2(3.7, 8.2)
+        );
+
+      float fine =
+        fbm(
+          q * vec2(5.8, 4.1) +
+          vec2(11.3, 2.9)
+        );
+
+      /*
+        Broad chromatic atmosphere: magenta-biased centre/left, blue
+        weight toward the right, and violet where those fields overlap.
+      */
+      float blueField =
+        smoothstep(
+          0.18,
+          0.92,
+          q.x +
+          (broad - 0.5) * 0.34
+        );
+
+      vec3 color =
+        mix(
+          purple * 0.62,
+          deepBlue,
+          blueField
+        );
+
+      float centerHaze =
+        exp(
+          -dot(
+            (q - vec2(0.47, 0.50)) *
+              vec2(1.10, 0.82),
+            (q - vec2(0.47, 0.50)) *
+              vec2(1.10, 0.82)
+          ) * 4.7
+        );
+
+      color +=
+        mix(
+          magenta,
+          violet,
+          blueField
+        ) *
+        centerHaze *
+        0.24;
+
+      /*
+        Three overlapping crystalline families. Their slants stay close
+        enough to feel like one visual language, but their widths and
+        segmentation create the layered shard density in the GIF.
+      */
+      float shardA =
+        shardMask(
+          q,
+          6.2,
+          -0.16,
+          12.7,
+          0.075,
+          0.155
+        );
+
+      float shardB =
+        shardMask(
+          q + vec2(0.04, -0.02),
+          8.4,
+          -0.11,
+          41.9,
+          0.045,
+          0.105
+        );
+
+      float shardC =
+        shardMask(
+          q + vec2(-0.03, 0.01),
+          5.1,
+          -0.22,
+          83.1,
+          0.090,
+          0.185
+        );
+
+      float idA =
+        floor(
+          (
+            q.x +
+            q.y * -0.16
+          ) * 6.2
+        );
+
+      float idB =
+        floor(
+          (
+            q.x +
+            q.y * -0.11
+          ) * 8.4
+        );
+
+      float idC =
+        floor(
+          (
+            q.x +
+            q.y * -0.22
+          ) * 5.1
+        );
+
+      vec3 shardColorA =
+        mix(
+          magenta,
+          electricBlue,
+          step(
+            0.52,
+            hash11(idA + 17.0)
+          )
+        );
+
+      shardColorA =
+        mix(
+          shardColorA,
+          lavender,
+          step(
+            0.84,
+            hash11(idA * 2.4 + 5.0)
+          )
+        );
+
+      vec3 shardColorB =
+        mix(
+          violet,
+          hotPink,
+          step(
+            0.60,
+            hash11(idB + 23.0)
+          )
+        );
+
+      shardColorB =
+        mix(
+          shardColorB,
+          electricBlue,
+          step(
+            0.78,
+            hash11(idB * 1.9 + 11.0)
+          )
+        );
+
+      vec3 shardColorC =
+        mix(
+          purple,
+          magenta,
+          step(
+            0.47,
+            hash11(idC + 37.0)
+          )
+        );
+
+      shardColorC =
+        mix(
+          shardColorC,
+          deepBlue,
+          step(
+            0.76,
+            hash11(idC * 2.7 + 3.0)
+          )
+        );
+
+      color =
+        mix(
+          color,
+          shardColorC,
+          shardC * 0.68
+        );
+
+      color =
+        mix(
+          color,
+          shardColorA,
+          shardA * 0.82
+        );
+
+      color =
+        mix(
+          color,
+          shardColorB,
+          shardB * 0.72
+        );
+
+      /*
+        Internal luminous variation keeps large shards from reading as
+        flat vector polygons.
+      */
+      float innerGlow =
+        smoothstep(
+          0.34,
+          0.90,
+          broad * 0.62 +
+          fine * 0.38
+        );
+
+      color +=
+        (
+          vec3(0.28, 0.10, 0.38) +
+          vec3(0.04, 0.16, 0.34) *
+            blueField
+        ) *
+        innerGlow *
+        (
+          0.13 +
+          max(
+            shardA,
+            max(shardB, shardC)
+          ) * 0.18
+        );
+
+      /*
+        Irregular near-black negative-space pockets, strongest at the
+        top-left and outer edges like the original reference.
+      */
+      float topLeft =
+        1.0 -
+        smoothstep(
+          0.10,
+          0.60,
+          distance(
+            q,
+            vec2(0.0, 1.0)
+          )
+        );
+
+      vec2 centered =
+        (q - 0.5) *
+        vec2(1.03, 0.82);
+
+      float edgeFalloff =
+        smoothstep(
+          0.39,
+          0.76,
+          length(centered)
+        );
+
+      float darkPocket =
+        smoothstep(
+          0.56,
+          0.82,
+          fbm(
+            q * vec2(3.1, 2.4) +
+            vec2(-4.0, 9.0)
+          )
+        );
+
+      float darken =
+        clamp(
+          topLeft * 0.88 +
+          edgeFalloff * 0.36 +
+          darkPocket * 0.20,
+          0.0,
+          0.94
+        );
+
+      color =
+        mix(
+          color,
+          ink,
+          darken
+        );
+
+      /*
+        Fine source-locked stipple + subtle line texture. Unlike the
+        existing final-frame grain, this texture travels with the source
+        through every refraction sample.
+      */
+      vec2 texel =
+        floor(
+          q *
+          vec2(1137.0, 540.0) *
+          0.44
+        );
+
+      float stipple =
+        hash21(
+          texel + 91.7
+        );
+
+      float micro =
+        (
+          stipple - 0.5
+        ) * 0.055;
+
+      float lineTexture =
+        sin(
+          q.y * 540.0 * 0.52
+        ) * 0.010;
+
+      color +=
+        vec3(
+          micro + lineTexture
+        );
+
+      /*
+        Small hot-core lift on bright magenta regions. This is what gives
+        the reference its fluorescent pink centres without globally
+        lifting the whole image.
+      */
+      float pinkCore =
+        shardA *
+        smoothstep(
+          0.62,
+          0.92,
+          1.0 - blueField
+        );
+
+      color +=
+        hotPink *
+        pinkCore *
+        0.12;
+
+      return clamp(
+        color,
+        0.0,
+        1.0
+      );
     }
 
     vec2 coverUV(vec2 uv) {
@@ -1221,16 +1783,14 @@
         );
 
       vec3 leftColor =
-        texture(
-          u_texture,
+        proceduralSource(
           coverUV(uvLeft)
-        ).rgb;
+        );
 
       vec3 rightColor =
-        texture(
-          u_texture,
+        proceduralSource(
           coverUV(uvRight)
-        ).rgb;
+        );
 
       vec3 baseColor =
         mix(
@@ -1256,19 +1816,16 @@
 
       vec3 diagonalColor =
         vec3(
-          texture(
-            u_texture,
+          proceduralSource(
             coverUV(
               diagonalUV +
               diagonalChroma
             )
           ).r,
-          texture(
-            u_texture,
+          proceduralSource(
             coverUV(diagonalUV)
           ).g,
-          texture(
-            u_texture,
+          proceduralSource(
             coverUV(
               diagonalUV -
               diagonalChroma
@@ -1296,19 +1853,16 @@
 
       vec3 sliceColor =
         vec3(
-          texture(
-            u_texture,
+          proceduralSource(
             coverUV(
               sliceUV +
               sliceChroma
             )
           ).r,
-          texture(
-            u_texture,
+          proceduralSource(
             coverUV(sliceUV)
           ).g,
-          texture(
-            u_texture,
+          proceduralSource(
             coverUV(
               sliceUV -
               sliceChroma
@@ -1331,19 +1885,16 @@
 
       vec3 hairColor =
         vec3(
-          texture(
-            u_texture,
+          proceduralSource(
             coverUV(
               hairUV +
               hairChroma
             )
           ).r,
-          texture(
-            u_texture,
+          proceduralSource(
             coverUV(hairUV)
           ).g,
-          texture(
-            u_texture,
+          proceduralSource(
             coverUV(
               hairUV -
               hairChroma
@@ -1359,20 +1910,17 @@
         );
 
       float r =
-        texture(
-          u_texture,
+        proceduralSource(
           coverUV(glitchUV + cOffset)
         ).r;
 
       float g =
-        texture(
-          u_texture,
+        proceduralSource(
           sampleBase
         ).g;
 
       float b =
-        texture(
-          u_texture,
+        proceduralSource(
           coverUV(glitchUV - cOffset)
         ).b;
 
@@ -1380,10 +1928,9 @@
         vec3(r, g, b);
 
       vec3 echoColor =
-        texture(
-          u_texture,
+        proceduralSource(
           sampleEcho
-        ).rgb;
+        );
 
       vec3 color =
         mix(
@@ -1422,10 +1969,9 @@
           );
 
         smear +=
-          texture(
-            u_texture,
+          proceduralSource(
             coverUV(smearUV)
-          ).rgb;
+          );
       }
 
       smear *= 1.0 / 6.0;
@@ -1828,30 +2374,25 @@
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-  const image = new Image();
-  image.decoding = "async";
-  image.src = "../../assets/identity/landing-opener-placeholder.webp?v=20261103-valid2";
+  /*
+    V30 is fully procedural: no source artwork is loaded.
+    The 1137x540 reference dimensions remain only as the canonical
+    aspect ratio used by coverUV(), matching the original GIF framing.
+  */
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA,
+    1,
+    1,
+    0,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    new Uint8Array([0, 0, 0, 255])
+  );
 
-  let textureReady = false;
-
-  image.onload = () => {
-    uniforms.textureWidth = image.naturalWidth || 1137;
-    uniforms.textureHeight = image.naturalHeight || 540;
-
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      image
-    );
-
-    textureReady = true;
-    root.classList.add("webgl-ready");
-  };
+  let textureReady = true;
+  root.classList.add("webgl-ready");
 
   function resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 1.75);
