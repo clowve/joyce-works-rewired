@@ -353,22 +353,23 @@
         layered counter-moving shards.
       */
       /*
-        SECONDARY REFRACTION LAYER:
-        restore the V12 smooth counter-moving plane exactly as approved.
-        This remains visually part of the living background.
+        V25 SECONDARY REFRACTION TUNING:
+        keep the approved smooth diagonal plane, but tighten its cadence
+        and increase its right-to-left travel speed. This is isolated
+        from the hard-glitch/slice system.
       */
       float diagonalPhase =
         sin(
-          (uv.x * 0.78 + uv.y) * 18.0 +
-          t * 3.15
+          (uv.x * 0.78 + uv.y) * 20.5 +
+          t * 3.75
         );
 
       float diagonalGate =
         0.5 +
         0.5 *
         sin(
-          (uv.x * 0.38 + uv.y) * 7.0 +
-          t * 1.85
+          (uv.x * 0.38 + uv.y) * 8.2 +
+          t * 2.25
         );
 
       vec2 diagonalUV =
@@ -382,13 +383,13 @@
 
       float diagonalMix =
         smoothstep(
-          0.44,
-          0.86,
+          0.40,
+          0.82,
           0.5 +
           0.5 *
           sin(
-            (uv.x - uv.y * 0.62) * 9.0 -
-            t * 2.25
+            (uv.x - uv.y * 0.62) * 11.5 +
+            t * 2.90
           )
         );
 
@@ -400,7 +401,7 @@
         );
 
       /*
-        V24 HARD-SLICE LAYER:
+        V23 HARD-SLICE LAYER:
         preserve the approved V17/V18 angle and continuous bars, but make
         spacing variation visibly structural instead of only changing
         width inside an evenly repeated grid.
@@ -415,7 +416,7 @@
       float sliceTravel =
         uv.x -
         uv.y * 0.37 +
-        t * 0.38;
+        t * 0.30;
 
       /*
         OUTER RHYTHM:
@@ -452,14 +453,14 @@
 
       float outerWidth =
         mix(
-          0.24,
-          0.38,
+          0.20,
+          0.34,
           outerRand
         ) +
         step(
-          0.90,
+          0.88,
           outerRandB
-        ) * 0.12;
+        ) * 0.14;
 
       float outerStart =
         0.045 +
@@ -490,7 +491,7 @@
       */
       float outerKeep =
         step(
-          0.15,
+          0.22,
           hash11(
             outerId * 2.11 + 5.0
           )
@@ -545,8 +546,8 @@
 
       float fineWidth =
         mix(
-          0.105,
-          0.175,
+          0.090,
+          0.155,
           fineRand
         );
 
@@ -575,7 +576,7 @@
 
       float fineKeep =
         step(
-          0.38,
+          0.43,
           hash11(
             fineId * 2.77 + 19.0
           )
@@ -585,7 +586,7 @@
         fineKeep;
 
       /*
-        V24 INTERMITTENT HAIRLINES:
+        V23 INTERMITTENT HAIRLINES:
         a second, much finer glitch family adds brief periods of extra
         activity without increasing the number of substantial bars.
         These lines share the hard-slice angle but remain visually tiny.
