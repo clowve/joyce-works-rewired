@@ -353,70 +353,104 @@
         layered counter-moving shards.
       */
       /*
-        V12: make the second motion plane unmistakable.
-        Broad diagonal shard-bands travel leftward across the artwork.
-        The bands are source-image refractions, not painted geometry.
+        V13: hard-edge diagonal shard plane.
+        This is intentionally visually distinct from the smoother base
+        currents: broad refractive plates with firmer edges, visible gaps,
+        and leftward travel.
       */
       float diagonalTravel =
         uv.x -
-        uv.y * 0.56 +
-        t * 0.22;
+        uv.y * 0.58 +
+        t * 0.24;
 
-      float diagonalCell =
+      float shardCell =
         fract(
-          diagonalTravel * 3.15 +
+          diagonalTravel * 2.6 +
           sin(
-            uv.y * 4.2 +
-            t * 0.75
-          ) * 0.10
+            uv.y * 3.8 +
+            t * 0.60
+          ) * 0.12
         );
 
-      float diagonalBand =
-        smoothstep(
-          0.05,
-          0.18,
-          diagonalCell
+      /*
+        Hard-edged shard window with a clear off-state.
+      */
+      float shardBand =
+        step(
+          0.12,
+          shardCell
         ) *
         (
           1.0 -
-          smoothstep(
-            0.60,
-            0.82,
-            diagonalCell
+          step(
+            0.58,
+            shardCell
           )
         );
 
+      /*
+        Break the broad band into irregular refractive plates so the
+        plane reads as fractured rather than as one clean ribbon.
+      */
+      float shardBreakup =
+        step(
+          0.42,
+          0.5 +
+          0.5 *
+          sin(
+            uv.y * 10.0 +
+            uv.x * 3.0 +
+            t * 1.4
+          )
+        );
+
+      float diagonalMask =
+        shardBand *
+        shardBreakup;
+
       float diagonalPhase =
         sin(
-          (uv.x * 0.66 + uv.y) * 12.5 +
-          t * 3.7
+          (uv.x * 0.62 + uv.y) * 11.5 +
+          t * 3.6
         );
 
       vec2 diagonalUV =
         signalUV +
         vec2(
-          -0.070 -
-            diagonalBand * 0.040 +
-            diagonalPhase * 0.016,
-          diagonalPhase * 0.008
+          -0.085 +
+          diagonalMask * -0.030 +
+          diagonalPhase * 0.010,
+          diagonalPhase * 0.006
         );
 
-      float diagonalMix =
-        diagonalBand *
-        (
-          0.72 +
-          0.28 *
+      /*
+        Tiny internal slices add a more digital fracture inside the
+        shard plane without drawing any literal overlay geometry.
+      */
+      float shardSlice =
+        step(
+          0.72,
+          0.5 +
+          0.5 *
           sin(
-            t * 2.2 +
-            uv.y * 5.0
+            uv.y * 95.0 +
+            t * 5.8
           )
         );
+
+      diagonalUV.x +=
+        shardSlice *
+        diagonalMask *
+        0.012;
+
+      float diagonalMix =
+        diagonalMask;
 
       signalUV =
         mix(
           signalUV,
           diagonalUV,
-          diagonalMix * 0.48
+          diagonalMask * 0.54
         );
 
       /*
@@ -611,7 +645,7 @@
       float chroma =
         0.0038 +
         ambientGlitch * 0.0046 +
-        diagonalMix * 0.0080 +
+        diagonalMask * 0.0080 +
         cursorInfluence *
           (0.016 + activeEnergy * 0.042) +
         memory * 0.026 +
@@ -623,10 +657,10 @@
           vec2(
             0.38 +
               currentLeft * 0.14 -
-              diagonalMix * 0.10,
+              diagonalMask * 0.10,
             0.08 +
               currentRight * 0.08 +
-              diagonalMix * 0.05
+              diagonalMask * 0.05
           )
         );
 
@@ -675,13 +709,14 @@
         refraction visibly distinct.
       */
       /*
-        Give the diagonal plane its own chromatic refraction so it reads
-        as a distinct moving layer rather than another translated copy.
+        The shard plane gets its own channel split so it reads as a
+        separate refractive sheet, not just a translated copy.
       */
       vec2 diagonalChroma =
         vec2(
-          0.010 + diagonalMix * 0.008,
-          -0.003
+          0.014 +
+          diagonalMask * 0.010,
+          -0.004
         );
 
       vec3 diagonalColor =
@@ -710,7 +745,7 @@
         mix(
           baseColor,
           diagonalColor,
-          diagonalMix * 0.62
+          diagonalMask * 0.58
         );
 
       float r =
