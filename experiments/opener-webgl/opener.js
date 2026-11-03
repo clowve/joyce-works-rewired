@@ -400,7 +400,7 @@
         );
 
       /*
-        V22 HARD-SLICE LAYER:
+        V23 HARD-SLICE LAYER:
         preserve the approved V17/V18 angle and continuous bars, but make
         spacing variation visibly structural instead of only changing
         width inside an evenly repeated grid.
@@ -490,7 +490,7 @@
       */
       float outerKeep =
         step(
-          0.14,
+          0.22,
           hash11(
             outerId * 2.11 + 5.0
           )
@@ -585,7 +585,7 @@
         fineKeep;
 
       /*
-        V22 INTERMITTENT HAIRLINES:
+        V23 INTERMITTENT HAIRLINES:
         a second, much finer glitch family adds brief periods of extra
         activity without increasing the number of substantial bars.
         These lines share the hard-slice angle but remain visually tiny.
@@ -651,13 +651,10 @@
         transition, avoiding an obvious rectangular cutout.
       */
       float sliceMask =
-        max(
-          mix(
-            outerBand,
-            fineBand,
-            centerQuiet
-          ),
-          hairMask
+        mix(
+          outerBand,
+          fineBand,
+          centerQuiet
         );
 
       float outerJitter =
