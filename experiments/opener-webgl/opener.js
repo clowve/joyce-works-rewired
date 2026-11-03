@@ -400,68 +400,49 @@
         );
 
       /*
-        V14 HARD-SLICE LAYER:
-        this is a NEW plane on top of the smooth refraction. It never
-        feeds back into signalUV, so its hard boundaries cannot dissolve
-        into the background motion.
+        V15 HARD-SLICE LAYER:
+        only this plane changes. The approved smooth background and
+        smooth diagonal refraction layers remain untouched.
 
-        Two binary masks create discrete diagonal fragments with actual
-        hard entry/exit edges.
+        Continuous hard bars, rotated ~7 degrees counter-clockwise from
+        V14 and packed closer together.
       */
       float sliceTravel =
         uv.x -
-        uv.y * 0.52 +
+        uv.y * 0.37 +
         t * 0.30;
 
       float sliceCell =
         fract(
-          sliceTravel * 3.8
+          sliceTravel * 5.0
         );
 
       float sliceBand =
         step(
-          0.08,
+          0.06,
           sliceCell
         ) *
         (
           1.0 -
           step(
-            0.31,
+            0.30,
             sliceCell
           )
         );
 
-      float sliceAlong =
-        fract(
-          (uv.x + uv.y * 0.34) * 3.25 +
-          t * 0.055
-        );
-
-      float sliceSegment =
-        step(
-          0.10,
-          sliceAlong
-        ) *
-        (
-          1.0 -
-          step(
-            0.72,
-            sliceAlong
-          )
-        );
-
+      /*
+        Keep the slice bars continuous along their length. V14 multiplied
+        by a second along-strip gate, which is what made them read as
+        dashes rather than uninterrupted refractive bars.
+      */
       float sliceMask =
-        sliceBand *
-        sliceSegment;
+        sliceBand;
 
       float sliceJitter =
         hash11(
           floor(
-            sliceTravel * 3.8
-          ) +
-          floor(
-            (uv.x + uv.y * 0.34) * 3.25
-          ) * 7.0
+            sliceTravel * 5.0
+          )
         );
 
       vec2 sliceUV =
