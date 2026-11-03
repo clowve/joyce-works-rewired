@@ -353,104 +353,123 @@
         layered counter-moving shards.
       */
       /*
-        V13: hard-edge diagonal shard plane.
-        This is intentionally visually distinct from the smoother base
-        currents: broad refractive plates with firmer edges, visible gaps,
-        and leftward travel.
+        SECONDARY REFRACTION LAYER:
+        restore the V12 smooth counter-moving plane exactly as approved.
+        This remains visually part of the living background.
       */
-      float diagonalTravel =
-        uv.x -
-        uv.y * 0.58 +
-        t * 0.24;
-
-      float shardCell =
-        fract(
-          diagonalTravel * 2.6 +
-          sin(
-            uv.y * 3.8 +
-            t * 0.60
-          ) * 0.12
-        );
-
-      /*
-        Hard-edged shard window with a clear off-state.
-      */
-      float shardBand =
-        step(
-          0.12,
-          shardCell
-        ) *
-        (
-          1.0 -
-          step(
-            0.58,
-            shardCell
-          )
-        );
-
-      /*
-        Break the broad band into irregular refractive plates so the
-        plane reads as fractured rather than as one clean ribbon.
-      */
-      float shardBreakup =
-        step(
-          0.42,
-          0.5 +
-          0.5 *
-          sin(
-            uv.y * 10.0 +
-            uv.x * 3.0 +
-            t * 1.4
-          )
-        );
-
-      float diagonalMask =
-        shardBand *
-        shardBreakup;
-
       float diagonalPhase =
         sin(
-          (uv.x * 0.62 + uv.y) * 11.5 +
-          t * 3.6
+          (uv.x * 0.78 + uv.y) * 18.0 +
+          t * 3.15
+        );
+
+      float diagonalGate =
+        0.5 +
+        0.5 *
+        sin(
+          (uv.x * 0.38 + uv.y) * 7.0 +
+          t * 1.85
         );
 
       vec2 diagonalUV =
         signalUV +
         vec2(
-          -0.085 +
-          diagonalMask * -0.030 +
-          diagonalPhase * 0.010,
-          diagonalPhase * 0.006
+          -0.034 -
+            diagonalGate * 0.028 +
+            diagonalPhase * 0.014,
+          diagonalPhase * 0.0065
         );
 
-      /*
-        Tiny internal slices add a more digital fracture inside the
-        shard plane without drawing any literal overlay geometry.
-      */
-      float shardSlice =
-        step(
-          0.72,
+      float diagonalMix =
+        smoothstep(
+          0.44,
+          0.86,
           0.5 +
           0.5 *
           sin(
-            uv.y * 95.0 +
-            t * 5.8
+            (uv.x - uv.y * 0.62) * 9.0 -
+            t * 2.25
           )
         );
-
-      diagonalUV.x +=
-        shardSlice *
-        diagonalMask *
-        0.012;
-
-      float diagonalMix =
-        diagonalMask;
 
       signalUV =
         mix(
           signalUV,
           diagonalUV,
-          diagonalMask * 0.54
+          diagonalMix * 0.54
+        );
+
+      /*
+        V14 HARD-SLICE LAYER:
+        this is a NEW plane on top of the smooth refraction. It never
+        feeds back into signalUV, so its hard boundaries cannot dissolve
+        into the background motion.
+
+        Two binary masks create discrete diagonal fragments with actual
+        hard entry/exit edges.
+      */
+      float sliceTravel =
+        uv.x -
+        uv.y * 0.52 +
+        t * 0.30;
+
+      float sliceCell =
+        fract(
+          sliceTravel * 3.8
+        );
+
+      float sliceBand =
+        step(
+          0.08,
+          sliceCell
+        ) *
+        (
+          1.0 -
+          step(
+            0.31,
+            sliceCell
+          )
+        );
+
+      float sliceAlong =
+        fract(
+          (uv.x + uv.y * 0.34) * 3.25 +
+          t * 0.055
+        );
+
+      float sliceSegment =
+        step(
+          0.10,
+          sliceAlong
+        ) *
+        (
+          1.0 -
+          step(
+            0.72,
+            sliceAlong
+          )
+        );
+
+      float sliceMask =
+        sliceBand *
+        sliceSegment;
+
+      float sliceJitter =
+        hash11(
+          floor(
+            sliceTravel * 3.8
+          ) +
+          floor(
+            (uv.x + uv.y * 0.34) * 3.25
+          ) * 7.0
+        );
+
+      vec2 sliceUV =
+        signalUV +
+        vec2(
+          -0.080 -
+            sliceJitter * 0.036,
+          (sliceJitter - 0.5) * 0.014
         );
 
       /*
@@ -645,7 +664,8 @@
       float chroma =
         0.0038 +
         ambientGlitch * 0.0046 +
-        diagonalMask * 0.0080 +
+        diagonalMix * 0.0046 +
+        sliceMask * 0.0030 +
         cursorInfluence *
           (0.016 + activeEnergy * 0.042) +
         memory * 0.026 +
@@ -657,10 +677,10 @@
           vec2(
             0.38 +
               currentLeft * 0.14 -
-              diagonalMask * 0.10,
+              diagonalMix * 0.10,
             0.08 +
               currentRight * 0.08 +
-              diagonalMask * 0.05
+              diagonalMix * 0.05
           )
         );
 
@@ -709,14 +729,12 @@
         refraction visibly distinct.
       */
       /*
-        The shard plane gets its own channel split so it reads as a
-        separate refractive sheet, not just a translated copy.
+        Smooth secondary refraction plane (V12 behavior restored).
       */
       vec2 diagonalChroma =
         vec2(
-          0.014 +
-          diagonalMask * 0.010,
-          -0.004
+          0.010 + diagonalMix * 0.008,
+          -0.003
         );
 
       vec3 diagonalColor =
@@ -745,7 +763,47 @@
         mix(
           baseColor,
           diagonalColor,
-          diagonalMask * 0.58
+          diagonalMix * 0.34
+        );
+
+      /*
+        Separate hard-slice plane. The mask itself is binary, so the
+        boundary stays crisp instead of feathering into the smooth field.
+        RGB channels are offset independently inside the slice only.
+      */
+      vec2 sliceChroma =
+        vec2(
+          0.018 + sliceJitter * 0.008,
+          -0.004 + sliceJitter * 0.004
+        );
+
+      vec3 sliceColor =
+        vec3(
+          texture(
+            u_texture,
+            coverUV(
+              sliceUV +
+              sliceChroma
+            )
+          ).r,
+          texture(
+            u_texture,
+            coverUV(sliceUV)
+          ).g,
+          texture(
+            u_texture,
+            coverUV(
+              sliceUV -
+              sliceChroma
+            )
+          ).b
+        );
+
+      baseColor =
+        mix(
+          baseColor,
+          sliceColor,
+          sliceMask * 0.72
         );
 
       float r =
