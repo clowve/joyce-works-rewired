@@ -353,27 +353,38 @@
         layered counter-moving shards.
       */
       /*
-        V26 SECONDARY REFRACTION TUNING:
-        standardized diagonal cadence. Main bands now live on a fixed
-        repeating grid with a clearly thin band and a consistent gap.
-        Fine intermittent hairlines may appear inside those gaps, but
-        never move the main bands or alter their spacing.
+        V27 SECONDARY REFRACTION TUNING:
+        one diagonal coordinate now owns angle, spacing, motion,
+        refraction phase and mask placement. This removes the accidental
+        second-angle family introduced in V26.
 
-        The entire plane travels faster right-to-left. This remains
-        isolated from the hard-glitch/slice system.
+        Main bands use one fixed width and one fixed gap. Hairlines sit
+        inside those gaps and never change the underlying cadence.
       */
+      float diagonalCoord =
+        (uv.x - uv.y * 0.62) * 5.6 +
+        t * 2.18;
+
+      float diagonalId =
+        floor(
+          diagonalCoord
+        );
+
+      float diagonalCell =
+        fract(
+          diagonalCoord
+        );
+
       float diagonalPhase =
         sin(
-          (uv.x * 0.78 + uv.y) * 20.5 +
-          t * 4.65
+          diagonalCoord * 6.28318
         );
 
       float diagonalGate =
         0.5 +
         0.5 *
-        sin(
-          (uv.x * 0.38 + uv.y) * 8.2 +
-          t * 2.85
+        cos(
+          diagonalCoord * 6.28318
         );
 
       vec2 diagonalUV =
@@ -386,44 +397,30 @@
         );
 
       /*
-        Fixed spacing: every main band occupies the same fraction of the
-        same repeating cell. A small feather preserves the smooth V12
-        refraction character instead of turning this into another hard
-        glitch layer.
+        Truly standardized cadence:
+        main band = fixed ~20% of each cell;
+        gap = fixed ~80% of each cell.
+        Only a narrow feather softens the edges.
       */
-      float diagonalCoord =
-        (uv.x - uv.y * 0.62) * 5.2 +
-        t * 1.72;
-
-      float diagonalId =
-        floor(
-          diagonalCoord
-        );
-
-      float diagonalCell =
-        fract(
-          diagonalCoord
-        );
-
       float diagonalMainMask =
         smoothstep(
-          0.035,
-          0.085,
+          0.045,
+          0.070,
           diagonalCell
         ) *
         (
           1.0 -
           smoothstep(
             0.245,
-            0.295,
+            0.270,
             diagonalCell
           )
         );
 
       /*
-        Hairlines live only inside the existing gap. Their position and
-        intermittent visibility vary per cell, but the main grid never
-        shifts. They are deliberately much finer than the main bands.
+        Intermittent hairlines are peppered only inside the fixed gap.
+        Their presence varies, but their existence never shifts either
+        edge of the main band or changes main-band spacing.
       */
       float diagonalHairSeed =
         hash11(
@@ -431,39 +428,39 @@
         );
 
       float diagonalHairCenter =
-        0.56 +
-        (diagonalHairSeed - 0.5) * 0.16;
+        0.53 +
+        (diagonalHairSeed - 0.5) * 0.20;
 
       float diagonalHairMask =
         smoothstep(
-          diagonalHairCenter - 0.030,
-          diagonalHairCenter - 0.010,
+          diagonalHairCenter - 0.018,
+          diagonalHairCenter - 0.006,
           diagonalCell
         ) *
         (
           1.0 -
           smoothstep(
-            diagonalHairCenter + 0.010,
-            diagonalHairCenter + 0.030,
+            diagonalHairCenter + 0.006,
+            diagonalHairCenter + 0.018,
             diagonalCell
           )
         );
 
       float diagonalHairPulse =
         smoothstep(
-          0.76,
-          0.94,
+          0.72,
+          0.92,
           0.5 +
           0.5 *
           sin(
-            t * (2.0 + diagonalHairSeed * 1.35) +
+            t * (2.4 + diagonalHairSeed * 1.55) +
             diagonalHairSeed * 6.28318
           )
         );
 
       diagonalHairMask *=
         step(
-          0.34,
+          0.30,
           diagonalHairSeed
         ) *
         diagonalHairPulse;
@@ -471,7 +468,7 @@
       float diagonalMix =
         max(
           diagonalMainMask,
-          diagonalHairMask * 0.56
+          diagonalHairMask * 0.54
         );
 
       signalUV =
