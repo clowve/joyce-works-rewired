@@ -352,38 +352,63 @@
         and gives the background another motion plane, closer to the OG's
         layered counter-moving shards.
       */
-      float diagonalPhase =
-        sin(
-          (uv.x * 0.78 + uv.y) * 18.0 +
-          t * 3.15
+      /*
+        V12: make the second motion plane unmistakable.
+        Broad diagonal shard-bands travel leftward across the artwork.
+        The bands are source-image refractions, not painted geometry.
+      */
+      float diagonalTravel =
+        uv.x -
+        uv.y * 0.56 +
+        t * 0.22;
+
+      float diagonalCell =
+        fract(
+          diagonalTravel * 3.15 +
+          sin(
+            uv.y * 4.2 +
+            t * 0.75
+          ) * 0.10
         );
 
-      float diagonalGate =
-        0.5 +
-        0.5 *
+      float diagonalBand =
+        smoothstep(
+          0.05,
+          0.18,
+          diagonalCell
+        ) *
+        (
+          1.0 -
+          smoothstep(
+            0.60,
+            0.82,
+            diagonalCell
+          )
+        );
+
+      float diagonalPhase =
         sin(
-          (uv.x * 0.38 + uv.y) * 7.0 +
-          t * 1.85
+          (uv.x * 0.66 + uv.y) * 12.5 +
+          t * 3.7
         );
 
       vec2 diagonalUV =
         signalUV +
         vec2(
-          -0.034 -
-            diagonalGate * 0.028 +
-            diagonalPhase * 0.014,
-          diagonalPhase * 0.0065
+          -0.070 -
+            diagonalBand * 0.040 +
+            diagonalPhase * 0.016,
+          diagonalPhase * 0.008
         );
 
       float diagonalMix =
-        smoothstep(
-          0.44,
-          0.86,
-          0.5 +
-          0.5 *
+        diagonalBand *
+        (
+          0.72 +
+          0.28 *
           sin(
-            (uv.x - uv.y * 0.62) * 9.0 -
-            t * 2.25
+            t * 2.2 +
+            uv.y * 5.0
           )
         );
 
@@ -391,7 +416,7 @@
         mix(
           signalUV,
           diagonalUV,
-          diagonalMix * 0.54
+          diagonalMix * 0.48
         );
 
       /*
@@ -586,7 +611,7 @@
       float chroma =
         0.0038 +
         ambientGlitch * 0.0046 +
-        diagonalMix * 0.0046 +
+        diagonalMix * 0.0080 +
         cursorInfluence *
           (0.016 + activeEnergy * 0.042) +
         memory * 0.026 +
@@ -649,17 +674,43 @@
         Sampling it as its own layer makes the counter-moving diagonal
         refraction visibly distinct.
       */
+      /*
+        Give the diagonal plane its own chromatic refraction so it reads
+        as a distinct moving layer rather than another translated copy.
+      */
+      vec2 diagonalChroma =
+        vec2(
+          0.010 + diagonalMix * 0.008,
+          -0.003
+        );
+
       vec3 diagonalColor =
-        texture(
-          u_texture,
-          coverUV(diagonalUV)
-        ).rgb;
+        vec3(
+          texture(
+            u_texture,
+            coverUV(
+              diagonalUV +
+              diagonalChroma
+            )
+          ).r,
+          texture(
+            u_texture,
+            coverUV(diagonalUV)
+          ).g,
+          texture(
+            u_texture,
+            coverUV(
+              diagonalUV -
+              diagonalChroma
+            )
+          ).b
+        );
 
       baseColor =
         mix(
           baseColor,
           diagonalColor,
-          diagonalMix * 0.34
+          diagonalMix * 0.62
         );
 
       float r =
