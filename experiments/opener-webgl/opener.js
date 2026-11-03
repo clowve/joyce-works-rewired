@@ -400,7 +400,7 @@
         );
 
       /*
-        V20 HARD-SLICE LAYER:
+        V21 HARD-SLICE LAYER:
         preserve the approved V17/V18 angle and continuous bars, but make
         spacing variation visibly structural instead of only changing
         width inside an evenly repeated grid.
@@ -719,12 +719,22 @@
           1.0
         );
 
-      signalUV.x +=
+      /*
+        V21 LAYER ISOLATION:
+        signalUV is now frozen as the approved base + smooth secondary
+        refraction coordinate. All autonomous, cursor and memory glitch
+        displacement happens on a clone so hard-glitch tuning cannot
+        alter the underlying diagonal shard/refraction plane.
+      */
+      vec2 glitchUV =
+        signalUV;
+
+      glitchUV.x +=
         legacyShear +
         legacyShearB;
 
       vec2 sliceUV =
-        signalUV +
+        glitchUV +
         vec2(
           -0.080 -
             sliceJitter * 0.036,
@@ -883,7 +893,7 @@
           sin(uv.x * 13.0 - t * 2.7)
         );
 
-      signalUV.x +=
+      glitchUV.x +=
         signedShear *
         (
           ambientArtifact * 0.018 +
@@ -891,7 +901,7 @@
           memoryArtifact * 0.032
         );
 
-      signalUV.y +=
+      glitchUV.y +=
         sin(
           uv.x * 21.0 -
           t * 4.6
@@ -905,7 +915,7 @@
         Fast pointer motion drags nearby source pixels; retained memory
         continues to glitch after the cursor leaves.
       */
-      signalUV -=
+      glitchUV -=
         u_pointerVelocity *
         cursorInfluence *
         (0.24 + activeEnergy * 0.42);
@@ -952,11 +962,11 @@
         different current weighting to keep the field electrically alive.
       */
       vec2 sampleBase =
-        coverUV(signalUV);
+        coverUV(glitchUV);
 
       vec2 sampleEcho =
         coverUV(
-          signalUV +
+          glitchUV +
           vec2(
             signedShear * artifact * 0.026,
             0.0
@@ -1069,7 +1079,7 @@
       float r =
         texture(
           u_texture,
-          coverUV(signalUV + cOffset)
+          coverUV(glitchUV + cOffset)
         ).r;
 
       float g =
@@ -1081,7 +1091,7 @@
       float b =
         texture(
           u_texture,
-          coverUV(signalUV - cOffset)
+          coverUV(glitchUV - cOffset)
         ).b;
 
       vec3 splitColor =
@@ -1117,7 +1127,7 @@
         float fi = float(i);
 
         vec2 smearUV =
-          signalUV -
+          glitchUV -
           velDir *
           (
             cursorInfluence *
