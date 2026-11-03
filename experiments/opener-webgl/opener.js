@@ -400,14 +400,17 @@
         );
 
       /*
-        V19 HARD-SLICE LAYER:
-        preserve V17/V18's angle and continuous bars, but break the
-        fence-like regularity. Most bars are finer, some cells open into
-        wider negative space, and a few retain the heavier V18 weight.
+        V20 HARD-SLICE LAYER:
+        preserve the approved V17/V18 angle and continuous bars, but make
+        spacing variation visibly structural instead of only changing
+        width inside an evenly repeated grid.
 
-        The horizontal middle becomes a safe-ish zone: a denser family
-        of finer bars replaces the heavier outer rhythm around the logo.
-        Autonomous glitch timing remains untouched.
+        Outside the center, the coordinate itself is gently warped so
+        bar-to-bar distance genuinely changes, with skipped cells creating
+        occasional larger negative-space breaks.
+
+        The horizontal middle is the safe-ish zone: fewer bars, thinner
+        bars, wider spacing and reduced autonomous shear intensity.
       */
       float sliceTravel =
         uv.x -
@@ -416,12 +419,20 @@
 
       /*
         OUTER RHYTHM:
-        variable-width bars in equal coordinate cells. Most stay slim;
-        occasional bars inherit something close to the V18 thickness,
-        while a small number of cells are skipped to create wider gaps.
+        warped scalar coordinate = visibly uneven spacing while every bar
+        remains straight and continuous along the approved diagonal.
       */
+      float outerWarp =
+        sin(
+          sliceTravel * 8.6 + 0.7
+        ) * 0.22 +
+        sin(
+          sliceTravel * 3.15 - 1.1
+        ) * 0.18;
+
       float outerCoord =
-        sliceTravel * 6.0;
+        sliceTravel * 5.7 +
+        outerWarp;
 
       float outerId =
         floor(outerCoord);
@@ -441,22 +452,22 @@
 
       float outerWidth =
         mix(
-          0.15,
-          0.28,
+          0.13,
+          0.27,
           outerRand
         ) +
         step(
-          0.82,
+          0.84,
           outerRandB
-        ) * 0.20;
+        ) * 0.22;
 
       float outerStart =
-        0.04 +
-        outerRandB * 0.10;
+        0.045 +
+        outerRandB * 0.08;
 
       float outerEnd =
         min(
-          0.96,
+          0.95,
           outerStart + outerWidth
         );
 
@@ -473,9 +484,13 @@
           )
         );
 
+      /*
+        Skip enough cells that the negative space changes at a glance:
+        some ordinary gaps, some doubled gaps, then occasional heavy bars.
+      */
       float outerKeep =
         step(
-          0.14,
+          0.24,
           hash11(
             outerId * 2.11 + 5.0
           )
@@ -486,25 +501,31 @@
 
       /*
         CENTER SAFE ZONE:
-        higher-frequency, consistently finer bars through the middle.
-        The transition is broad enough to feel compositional rather than
-        like a literal horizontal mask.
+        the middle is deliberately calmer, not denser. Lower frequency +
+        more skipped cells + thinner widths means fewer interruptions and
+        visibly wider breathing room through the logo area.
       */
       float centerDistance =
         abs(
           uv.y - 0.5
         );
 
-      float centerFine =
+      float centerQuiet =
         1.0 -
         smoothstep(
-          0.115,
+          0.105,
           0.235,
           centerDistance
         );
 
+      float centerWarp =
+        sin(
+          sliceTravel * 5.1 + 2.4
+        ) * 0.16;
+
       float fineCoord =
-        sliceTravel * 9.0;
+        sliceTravel * 4.35 +
+        centerWarp;
 
       float fineId =
         floor(fineCoord);
@@ -524,18 +545,18 @@
 
       float fineWidth =
         mix(
-          0.11,
-          0.20,
+          0.075,
+          0.14,
           fineRand
         );
 
       float fineStart =
-        0.045 +
-        fineRandB * 0.055;
+        0.055 +
+        fineRandB * 0.075;
 
       float fineEnd =
         min(
-          0.94,
+          0.92,
           fineStart + fineWidth
         );
 
@@ -552,15 +573,27 @@
           )
         );
 
+      float fineKeep =
+        step(
+          0.43,
+          hash11(
+            fineId * 2.77 + 19.0
+          )
+        );
+
+      fineBand *=
+        fineKeep;
+
       /*
-        Keep the slice bars continuous along their length. Only their
-        thickness/spacing family changes across the horizontal field.
+        Keep every slice continuous along its length. The center replaces
+        the outer pattern with the quieter fine family through a soft
+        transition, avoiding an obvious rectangular cutout.
       */
       float sliceMask =
         mix(
           outerBand,
           fineBand,
-          centerFine
+          centerQuiet
         );
 
       float outerJitter =
@@ -577,7 +610,7 @@
         mix(
           outerJitter,
           fineJitter,
-          centerFine
+          centerQuiet
         );
 
       /*
@@ -619,6 +652,11 @@
       float legacyShear =
         (legacyStripeSeed - 0.5) *
         legacyGate *
+        mix(
+          1.0,
+          0.34,
+          centerQuiet
+        ) *
         (
           0.026 +
           0.040 *
@@ -660,6 +698,11 @@
       float legacyShearB =
         (legacyStripeSeedB - 0.5) *
         legacyGateB *
+        mix(
+          1.0,
+          0.42,
+          centerQuiet
+        ) *
         (
           0.010 +
           0.022 *
