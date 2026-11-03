@@ -400,12 +400,14 @@
         );
 
       /*
-        V15 HARD-SLICE LAYER:
+        V17 HARD-SLICE LAYER:
         only this plane changes. The approved smooth background and
         smooth diagonal refraction layers remain untouched.
 
-        Continuous hard bars, rotated ~7 degrees counter-clockwise from
-        V14 and packed closer together.
+        Continuous hard bars, rotated ~7 degrees counter-clockwise.
+        Bar width and negative space are now intentionally near-equal
+        (roughly 48/52) so the cadence reads as bars rather than stripes
+        separated by oversized gaps.
       */
       float sliceTravel =
         uv.x -
@@ -419,13 +421,13 @@
 
       float sliceBand =
         step(
-          0.06,
+          0.04,
           sliceCell
         ) *
         (
           1.0 -
           step(
-            0.40,
+            0.52,
             sliceCell
           )
         );
