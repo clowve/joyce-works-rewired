@@ -400,7 +400,7 @@
         );
 
       /*
-        V21 HARD-SLICE LAYER:
+        V22 HARD-SLICE LAYER:
         preserve the approved V17/V18 angle and continuous bars, but make
         spacing variation visibly structural instead of only changing
         width inside an evenly repeated grid.
@@ -452,14 +452,14 @@
 
       float outerWidth =
         mix(
-          0.13,
-          0.27,
+          0.20,
+          0.34,
           outerRand
         ) +
         step(
-          0.84,
+          0.88,
           outerRandB
-        ) * 0.22;
+        ) * 0.14;
 
       float outerStart =
         0.045 +
@@ -490,7 +490,7 @@
       */
       float outerKeep =
         step(
-          0.24,
+          0.14,
           hash11(
             outerId * 2.11 + 5.0
           )
@@ -545,8 +545,8 @@
 
       float fineWidth =
         mix(
-          0.075,
-          0.14,
+          0.090,
+          0.155,
           fineRand
         );
 
@@ -585,15 +585,79 @@
         fineKeep;
 
       /*
+        V22 INTERMITTENT HAIRLINES:
+        a second, much finer glitch family adds brief periods of extra
+        activity without increasing the number of substantial bars.
+        These lines share the hard-slice angle but remain visually tiny.
+      */
+      float hairCoord =
+        sliceTravel * 18.0 +
+        sin(
+          sliceTravel * 6.4 + 1.8
+        ) * 0.10;
+
+      float hairId =
+        floor(hairCoord);
+
+      float hairCell =
+        fract(hairCoord);
+
+      float hairSeed =
+        hash11(
+          hairId * 1.91 + 83.0
+        );
+
+      float hairBand =
+        step(
+          0.035,
+          hairCell
+        ) *
+        (
+          1.0 -
+          step(
+            0.082,
+            hairCell
+          )
+        );
+
+      float hairKeep =
+        step(
+          0.46,
+          hairSeed
+        );
+
+      float hairPulse =
+        smoothstep(
+          0.57,
+          0.88,
+          noise1(
+            t * 3.35 + 41.0
+          )
+        );
+
+      float hairMask =
+        hairBand *
+        hairKeep *
+        hairPulse *
+        mix(
+          1.0,
+          0.24,
+          centerQuiet
+        );
+
+      /*
         Keep every slice continuous along its length. The center replaces
         the outer pattern with the quieter fine family through a soft
         transition, avoiding an obvious rectangular cutout.
       */
       float sliceMask =
-        mix(
-          outerBand,
-          fineBand,
-          centerQuiet
+        max(
+          mix(
+            outerBand,
+            fineBand,
+            centerQuiet
+          ),
+          hairMask
         );
 
       float outerJitter =
@@ -739,6 +803,14 @@
           -0.080 -
             sliceJitter * 0.036,
           (sliceJitter - 0.5) * 0.014
+        );
+
+      vec2 hairUV =
+        glitchUV +
+        vec2(
+          -0.034 -
+            hairSeed * 0.016,
+          (hairSeed - 0.5) * 0.006
         );
 
       /*
@@ -1074,6 +1146,41 @@
           baseColor,
           sliceColor,
           sliceMask * 0.72
+        );
+
+      vec2 hairChroma =
+        vec2(
+          0.008 + hairSeed * 0.004,
+          -0.002
+        );
+
+      vec3 hairColor =
+        vec3(
+          texture(
+            u_texture,
+            coverUV(
+              hairUV +
+              hairChroma
+            )
+          ).r,
+          texture(
+            u_texture,
+            coverUV(hairUV)
+          ).g,
+          texture(
+            u_texture,
+            coverUV(
+              hairUV -
+              hairChroma
+            )
+          ).b
+        );
+
+      baseColor =
+        mix(
+          baseColor,
+          hairColor,
+          hairMask * 0.46
         );
 
       float r =
