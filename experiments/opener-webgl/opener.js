@@ -447,6 +447,106 @@
           )
         );
 
+      /*
+        V18 AUTONOMOUS SIGNAL SPIKES:
+        revive the original V1 intermittent horizontal stripe-shear
+        vocabulary as a separate, cursor-independent layer.
+
+        V1 used a single sparse clock. Here a primary spike clock plus a
+        smaller secondary clock reduce long dead gaps without making the
+        image permanently glitchy.
+      */
+      float legacyClock =
+        floor(t * 1.55);
+
+      float legacySeed =
+        hash11(
+          legacyClock * 4.71 +
+          17.0
+        );
+
+      float legacyGate =
+        smoothstep(
+          0.66,
+          0.94,
+          legacySeed
+        );
+
+      float legacyStripe =
+        floor(
+          (uv.y + t * 0.012) * 21.0
+        );
+
+      float legacyStripeSeed =
+        hash11(
+          legacyStripe +
+          legacyClock * 13.0
+        );
+
+      float legacyShear =
+        (legacyStripeSeed - 0.5) *
+        legacyGate *
+        (
+          0.026 +
+          0.040 *
+          hash11(
+            legacyStripe + 2.0
+          )
+        );
+
+      float legacyClockB =
+        floor(
+          t * 2.25 +
+          9.0
+        );
+
+      float legacySeedB =
+        hash11(
+          legacyClockB * 7.13 +
+          31.0
+        );
+
+      float legacyGateB =
+        smoothstep(
+          0.79,
+          0.97,
+          legacySeedB
+        );
+
+      float legacyStripeB =
+        floor(
+          (uv.y - t * 0.016) * 31.0
+        );
+
+      float legacyStripeSeedB =
+        hash11(
+          legacyStripeB +
+          legacyClockB * 17.0
+        );
+
+      float legacyShearB =
+        (legacyStripeSeedB - 0.5) *
+        legacyGateB *
+        (
+          0.010 +
+          0.022 *
+          hash11(
+            legacyStripeB + 5.0
+          )
+        );
+
+      float autonomousGlitch =
+        clamp(
+          legacyGate +
+          legacyGateB * 0.72,
+          0.0,
+          1.0
+        );
+
+      signalUV.x +=
+        legacyShear +
+        legacyShearB;
+
       vec2 sliceUV =
         signalUV +
         vec2(
@@ -647,6 +747,7 @@
       float chroma =
         0.0038 +
         ambientGlitch * 0.0046 +
+        autonomousGlitch * 0.0075 +
         diagonalMix * 0.0046 +
         sliceMask * 0.0030 +
         cursorInfluence *
