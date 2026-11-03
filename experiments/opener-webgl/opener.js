@@ -141,6 +141,15 @@
     }
 
     fillMark.style.opacity = String(fillProgress);
+
+    /*
+      Crossfade the drawn outline into the solid mark. This removes the
+      visual "full outline hold" even though the actual trace speed stays
+      exactly the same.
+    */
+    drawHost.style.opacity =
+      String(1 - smooth(0.10, 0.98, fillProgress));
+
     veil.style.opacity = String(veilProgress * 0.98);
 
     if (uniforms) {
@@ -281,7 +290,7 @@
         texture(
           u_memoryTexture,
           v_uv
-        ).r;
+        ).a;
 
       memory =
         smoothstep(0.085, 0.76, memory);
@@ -334,6 +343,55 @@
           uvLeft,
           uvRight,
           currentMix
+        );
+
+      /*
+        SECONDARY REFRACTION LAYER:
+        an independent set of diagonal source refractions travels
+        leftward across the field. This sits behind cursor interaction
+        and gives the background another motion plane, closer to the OG's
+        layered counter-moving shards.
+      */
+      float diagonalPhase =
+        sin(
+          (uv.x * 0.78 + uv.y) * 18.0 +
+          t * 3.15
+        );
+
+      float diagonalGate =
+        0.5 +
+        0.5 *
+        sin(
+          (uv.x * 0.38 + uv.y) * 7.0 +
+          t * 1.85
+        );
+
+      vec2 diagonalUV =
+        signalUV +
+        vec2(
+          -0.024 -
+            diagonalGate * 0.020 +
+            diagonalPhase * 0.010,
+          diagonalPhase * 0.0045
+        );
+
+      float diagonalMix =
+        smoothstep(
+          0.44,
+          0.86,
+          0.5 +
+          0.5 *
+          sin(
+            (uv.x - uv.y * 0.62) * 9.0 -
+            t * 2.25
+          )
+        );
+
+      signalUV =
+        mix(
+          signalUV,
+          diagonalUV,
+          diagonalMix * 0.42
         );
 
       /*
@@ -526,19 +584,24 @@
         ambient pulses, the live cursor and the persistent wake.
       */
       float chroma =
-        0.0034 +
-        ambientGlitch * 0.0042 +
+        0.0038 +
+        ambientGlitch * 0.0046 +
+        diagonalMix * 0.0024 +
         cursorInfluence *
-          (0.010 + activeEnergy * 0.030) +
-        memory * 0.020 +
-        artifact * 0.008;
+          (0.016 + activeEnergy * 0.042) +
+        memory * 0.026 +
+        artifact * 0.010;
 
       vec2 chromaDir =
         normalize(
           velDir * 0.74 +
           vec2(
-            0.38 + currentLeft * 0.14,
-            0.08 + currentRight * 0.08
+            0.38 +
+              currentLeft * 0.14 -
+              diagonalMix * 0.10,
+            0.08 +
+              currentRight * 0.08 +
+              diagonalMix * 0.05
           )
         );
 
@@ -896,7 +959,7 @@
     memoryCtx.globalCompositeOperation =
       "destination-out";
     memoryCtx.fillStyle =
-      "rgba(0,0,0,0.018)";
+      "rgba(0,0,0,0.010)";
     memoryCtx.fillRect(
       0,
       0,
