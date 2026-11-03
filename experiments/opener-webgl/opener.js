@@ -13,6 +13,20 @@
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reducedMotion) return;
 
+  /*
+    V32 source switch:
+      default             -> protected V28 placeholder baseline
+      ?source=procedural  -> one-time generated source texture
+
+    The procedural artwork is generated once on load, then sampled by the
+    exact same V28 motion shader. No per-frame procedural field synthesis.
+  */
+  const sourceMode =
+    new URLSearchParams(window.location.search)
+      .get("source") === "procedural"
+      ? "procedural"
+      : "baseline";
+
   const clamp01 = v => Math.max(0, Math.min(1, v));
   const smooth = (a, b, v) => {
     const t = clamp01((v - a) / Math.max(0.00001, b - a));
@@ -1684,30 +1698,640 @@
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-  const image = new Image();
-  image.decoding = "async";
-  image.src = "../../assets/identity/landing-opener-placeholder.webp?v=20261103-valid2";
+  function createSeededRandom(seed = 0x4a4f5943) {
+    let state = seed >>> 0;
 
-  let textureReady = false;
+    return () => {
+      state ^= state << 13;
+      state ^= state >>> 17;
+      state ^= state << 5;
 
-  image.onload = () => {
-    uniforms.textureWidth = image.naturalWidth || 1137;
-    uniforms.textureHeight = image.naturalHeight || 540;
+      return (
+        (state >>> 0) /
+        4294967296
+      );
+    };
+  }
 
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  function buildProceduralSourceCanvas() {
+    const width = 1137;
+    const height = 540;
+
+    const sourceCanvas =
+      document.createElement("canvas");
+
+    sourceCanvas.width = width;
+    sourceCanvas.height = height;
+
+    const ctx =
+      sourceCanvas.getContext("2d", {
+        alpha: false
+      });
+
+    if (!ctx) return sourceCanvas;
+
+    const rand =
+      createSeededRandom();
+
+    const palette = {
+      ink: "#09000f",
+      deepBlue: "#07155c",
+      cobalt: "#0b43dc",
+      electricBlue: "#1678ff",
+      violet: "#7138e8",
+      lavender: "#9e7cff",
+      purple: "#8e168c",
+      magenta: "#ff1594",
+      hotPink: "#ff174f"
+    };
+
+    /*
+      Base atmosphere: dark violet left, cobalt/blue right. This is a
+      generated color field, not a sampled or traced frame from the GIF.
+    */
+    const base =
+      ctx.createLinearGradient(
+        0,
+        height * 0.42,
+        width,
+        height * 0.58
+      );
+
+    base.addColorStop(
+      0.00,
+      palette.ink
+    );
+
+    base.addColorStop(
+      0.18,
+      "#32104f"
+    );
+
+    base.addColorStop(
+      0.47,
+      "#66236f"
+    );
+
+    base.addColorStop(
+      0.72,
+      "#173c9e"
+    );
+
+    base.addColorStop(
+      1.00,
+      palette.deepBlue
+    );
+
+    ctx.fillStyle = base;
+    ctx.fillRect(
+      0,
+      0,
+      width,
+      height
+    );
+
+    /*
+      Central luminous haze. Large soft gradients make the field feel
+      internally lit without requiring an expensive real-time bloom pass.
+    */
+    const haze =
+      ctx.createRadialGradient(
+        width * 0.47,
+        height * 0.48,
+        0,
+        width * 0.47,
+        height * 0.48,
+        width * 0.55
+      );
+
+    haze.addColorStop(
+      0.00,
+      "rgba(255,45,171,0.36)"
+    );
+
+    haze.addColorStop(
+      0.36,
+      "rgba(164,66,230,0.22)"
+    );
+
+    haze.addColorStop(
+      0.72,
+      "rgba(31,79,214,0.09)"
+    );
+
+    haze.addColorStop(
+      1.00,
+      "rgba(0,0,0,0)"
+    );
+
+    ctx.fillStyle = haze;
+    ctx.fillRect(
+      0,
+      0,
+      width,
+      height
+    );
+
+    const shardPalettes = [
+      [
+        palette.magenta,
+        palette.lavender,
+        palette.hotPink
+      ],
+      [
+        palette.cobalt,
+        palette.electricBlue,
+        palette.violet
+      ],
+      [
+        palette.purple,
+        palette.magenta,
+        palette.cobalt
+      ]
+    ];
+
+    function drawShardFamily(
+      count,
+      minWidth,
+      maxWidth,
+      minHeight,
+      maxHeight,
+      slope,
+      opacity,
+      familyIndex
+    ) {
+      const colors =
+        shardPalettes[
+          familyIndex %
+          shardPalettes.length
+        ];
+
+      for (let i = 0; i < count; i++) {
+        const shardWidth =
+          minWidth +
+          rand() *
+          (maxWidth - minWidth);
+
+        const shardHeight =
+          minHeight +
+          rand() *
+          (maxHeight - minHeight);
+
+        const baseX =
+          -width * 0.06 +
+          rand() * width * 1.12;
+
+        const topY =
+          -height * 0.16 +
+          rand() *
+          (
+            height * 1.12 -
+            shardHeight
+          );
+
+        const bottomY =
+          topY +
+          shardHeight;
+
+        const topX =
+          baseX +
+          slope *
+          (height - topY) +
+          (rand() - 0.5) *
+          shardWidth *
+          0.7;
+
+        const bottomX =
+          baseX +
+          slope *
+          (height - bottomY);
+
+        const midY1 =
+          topY +
+          shardHeight *
+          (
+            0.26 +
+            rand() * 0.08
+          );
+
+        const midY2 =
+          topY +
+          shardHeight *
+          (
+            0.62 +
+            rand() * 0.10
+          );
+
+        const wobbleA =
+          (rand() - 0.5) *
+          shardWidth *
+          0.55;
+
+        const wobbleB =
+          (rand() - 0.5) *
+          shardWidth *
+          0.55;
+
+        ctx.save();
+
+        ctx.beginPath();
+        ctx.moveTo(
+          topX,
+          topY
+        );
+
+        ctx.lineTo(
+          topX + shardWidth * 0.34,
+          midY1
+        );
+
+        ctx.lineTo(
+          topX + shardWidth * 0.12 + wobbleA,
+          midY2
+        );
+
+        ctx.lineTo(
+          bottomX + shardWidth * 0.48,
+          bottomY
+        );
+
+        ctx.lineTo(
+          bottomX - shardWidth * 0.44,
+          bottomY
+        );
+
+        ctx.lineTo(
+          topX - shardWidth * 0.22 + wobbleB,
+          midY2
+        );
+
+        ctx.lineTo(
+          topX - shardWidth * 0.40,
+          midY1
+        );
+
+        ctx.closePath();
+        ctx.clip();
+
+        const grad =
+          ctx.createLinearGradient(
+            topX - shardWidth,
+            topY,
+            bottomX + shardWidth,
+            bottomY
+          );
+
+        const c0 =
+          colors[
+            Math.floor(
+              rand() * colors.length
+            )
+          ];
+
+        const c1 =
+          colors[
+            Math.floor(
+              rand() * colors.length
+            )
+          ];
+
+        const c2 =
+          colors[
+            Math.floor(
+              rand() * colors.length
+            )
+          ];
+
+        grad.addColorStop(
+          0.00,
+          c0
+        );
+
+        grad.addColorStop(
+          0.48,
+          c1
+        );
+
+        grad.addColorStop(
+          1.00,
+          c2
+        );
+
+        ctx.globalAlpha =
+          opacity *
+          (
+            0.72 +
+            rand() * 0.28
+          );
+
+        ctx.fillStyle = grad;
+        ctx.fillRect(
+          Math.min(
+            topX,
+            bottomX
+          ) - shardWidth * 1.2,
+          topY,
+          shardWidth * 2.4,
+          shardHeight
+        );
+
+        /*
+          One brighter internal facet per selected shard. This adds the
+          hot cores visible in the reference without copying its geometry.
+        */
+        if (rand() > 0.34) {
+          const facet =
+            ctx.createLinearGradient(
+              topX,
+              topY,
+              bottomX,
+              bottomY
+            );
+
+          facet.addColorStop(
+            0.00,
+            "rgba(255,255,255,0)"
+          );
+
+          facet.addColorStop(
+            0.44,
+            familyIndex === 1
+              ? "rgba(111,188,255,0.34)"
+              : "rgba(255,103,214,0.38)"
+          );
+
+          facet.addColorStop(
+            0.62,
+            "rgba(255,255,255,0)"
+          );
+
+          ctx.globalAlpha =
+            opacity * 0.78;
+
+          ctx.fillStyle = facet;
+          ctx.fillRect(
+            Math.min(
+              topX,
+              bottomX
+            ) - shardWidth,
+            topY,
+            shardWidth * 2,
+            shardHeight
+          );
+        }
+
+        ctx.restore();
+      }
+    }
+
+    /*
+      Coarse / medium / fine shard families. They overlap but share a
+      closely related diagonal direction so the composition stays coherent.
+    */
+    drawShardFamily(
+      11,
+      105,
+      210,
+      390,
+      720,
+      -0.18,
+      0.86,
+      0
+    );
+
+    drawShardFamily(
+      17,
+      54,
+      122,
+      250,
+      560,
+      -0.15,
+      0.72,
+      1
+    );
+
+    drawShardFamily(
+      15,
+      34,
+      78,
+      150,
+      390,
+      -0.21,
+      0.58,
+      2
+    );
+
+    /*
+      A few cropped edge fragments keep the composition from looking like
+      evenly distributed generative wallpaper.
+    */
+    ctx.save();
+    ctx.globalAlpha = 0.72;
+    ctx.fillStyle = palette.hotPink;
+
+    for (let i = 0; i < 7; i++) {
+      const y =
+        height *
+        (
+          0.18 +
+          i * 0.095
+        );
+
+      ctx.fillRect(
+        0,
+        y,
+        48 + rand() * 88,
+        10 + rand() * 30
+      );
+    }
+
+    ctx.restore();
+
+    /*
+      Fine source texture. Generated once, so this has effectively zero
+      impact on animation/scroll performance after upload.
+    */
+    const imageData =
+      ctx.getImageData(
+        0,
+        0,
+        width,
+        height
+      );
+
+    const data =
+      imageData.data;
+
+    for (
+      let i = 0;
+      i < data.length;
+      i += 4
+    ) {
+      const n =
+        (
+          rand() - 0.5
+        ) * 18;
+
+      data[i] =
+        Math.max(
+          0,
+          Math.min(
+            255,
+            data[i] + n
+          )
+        );
+
+      data[i + 1] =
+        Math.max(
+          0,
+          Math.min(
+            255,
+            data[i + 1] + n
+          )
+        );
+
+      data[i + 2] =
+        Math.max(
+          0,
+          Math.min(
+            255,
+            data[i + 2] + n
+          )
+        );
+    }
+
+    ctx.putImageData(
+      imageData,
+      0,
+      0
+    );
+
+    /*
+      Dark edge falloff, particularly top-left, matching the reference's
+      negative-space balance without tracing its exact shapes.
+    */
+    const vignette =
+      ctx.createRadialGradient(
+        width * 0.50,
+        height * 0.50,
+        width * 0.18,
+        width * 0.50,
+        height * 0.50,
+        width * 0.72
+      );
+
+    vignette.addColorStop(
+      0.00,
+      "rgba(0,0,0,0)"
+    );
+
+    vignette.addColorStop(
+      0.68,
+      "rgba(0,0,0,0.04)"
+    );
+
+    vignette.addColorStop(
+      1.00,
+      "rgba(0,0,0,0.58)"
+    );
+
+    ctx.fillStyle = vignette;
+    ctx.fillRect(
+      0,
+      0,
+      width,
+      height
+    );
+
+    const topLeft =
+      ctx.createRadialGradient(
+        0,
+        0,
+        0,
+        0,
+        0,
+        width * 0.46
+      );
+
+    topLeft.addColorStop(
+      0.00,
+      "rgba(0,0,0,0.86)"
+    );
+
+    topLeft.addColorStop(
+      1.00,
+      "rgba(0,0,0,0)"
+    );
+
+    ctx.fillStyle = topLeft;
+    ctx.fillRect(
+      0,
+      0,
+      width,
+      height
+    );
+
+    return sourceCanvas;
+  }
+
+  function uploadSourceTexture(
+    source,
+    width,
+    height
+  ) {
+    uniforms.textureWidth =
+      width || 1137;
+
+    uniforms.textureHeight =
+      height || 540;
+
+    gl.bindTexture(
+      gl.TEXTURE_2D,
+      texture
+    );
+
+    gl.pixelStorei(
+      gl.UNPACK_FLIP_Y_WEBGL,
+      true
+    );
+
     gl.texImage2D(
       gl.TEXTURE_2D,
       0,
       gl.RGBA,
       gl.RGBA,
       gl.UNSIGNED_BYTE,
-      image
+      source
     );
 
     textureReady = true;
     root.classList.add("webgl-ready");
-  };
+  }
+
+  let textureReady = false;
+
+  if (sourceMode === "procedural") {
+    const sourceCanvas =
+      buildProceduralSourceCanvas();
+
+    uploadSourceTexture(
+      sourceCanvas,
+      sourceCanvas.width,
+      sourceCanvas.height
+    );
+  } else {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = "../../assets/identity/landing-opener-placeholder.webp?v=20261103-valid2";
+
+    image.onload = () => {
+      uploadSourceTexture(
+        image,
+        image.naturalWidth || 1137,
+        image.naturalHeight || 540
+      );
+    };
+  }
 
   function resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 1.75);
