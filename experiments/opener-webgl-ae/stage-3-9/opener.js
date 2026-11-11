@@ -50,7 +50,6 @@
     uniform float u_time;
     uniform float u_motion;
     uniform float u_zoomMode;
-    uniform sampler2D u_underpaint;
 
     in vec2 v_uv;
     out vec4 outColor;
@@ -362,6 +361,158 @@
             cell
           )
         );
+    }
+
+    float cross2d(
+      vec2 a,
+      vec2 b,
+      vec2 p
+    ) {
+      vec2 ab = b - a;
+      vec2 ap = p - a;
+
+      return
+        ab.x * ap.y -
+        ab.y * ap.x;
+    }
+
+    float insideTriangle(
+      vec2 p,
+      vec2 a,
+      vec2 b,
+      vec2 c
+    ) {
+      float c1 = cross2d(a, b, p);
+      float c2 = cross2d(b, c, p);
+      float c3 = cross2d(c, a, p);
+
+      bool hasNeg =
+        (c1 < 0.0) ||
+        (c2 < 0.0) ||
+        (c3 < 0.0);
+
+      bool hasPos =
+        (c1 > 0.0) ||
+        (c2 > 0.0) ||
+        (c3 > 0.0);
+
+      return
+        (hasNeg && hasPos)
+          ? 0.0
+          : 1.0;
+    }
+
+    float insideQuad(
+      vec2 p,
+      vec2 a,
+      vec2 b,
+      vec2 c,
+      vec2 d
+    ) {
+      float c1 = cross2d(a, b, p);
+      float c2 = cross2d(b, c, p);
+      float c3 = cross2d(c, d, p);
+      float c4 = cross2d(d, a, p);
+
+      bool hasNeg =
+        (c1 < 0.0) ||
+        (c2 < 0.0) ||
+        (c3 < 0.0) ||
+        (c4 < 0.0);
+
+      bool hasPos =
+        (c1 > 0.0) ||
+        (c2 > 0.0) ||
+        (c3 > 0.0) ||
+        (c4 > 0.0);
+
+      return
+        (hasNeg && hasPos)
+          ? 0.0
+          : 1.0;
+    }
+
+    vec3 exactUnderpaint(
+      vec2 screenUV
+    ) {
+      /*
+        Stage 3.9.2:
+        exact geometry traced from Joyce's 956x547 artwork.
+
+        screenUV is top-left oriented:
+        (0,0) = top-left
+        (1,1) = bottom-right
+      */
+      vec3 magenta =
+        vec3(
+          250.0 / 255.0,
+          24.0 / 255.0,
+          209.0 / 255.0
+        );
+
+      vec3 cobalt =
+        vec3(
+          0.0,
+          0.0,
+          254.0 / 255.0
+        );
+
+      vec3 black =
+        vec3(0.0);
+
+      float blueMask =
+        insideTriangle(
+          screenUV,
+          vec2(
+            499.0 / 956.0,
+            0.0
+          ),
+          vec2(
+            1.0,
+            0.0
+          ),
+          vec2(
+            1.0,
+            507.0 / 547.0
+          )
+        );
+
+      float blackMask =
+        insideQuad(
+          screenUV,
+          vec2(
+            0.0,
+            0.0
+          ),
+          vec2(
+            262.0 / 956.0,
+            0.0
+          ),
+          vec2(
+            59.0 / 956.0,
+            233.0 / 547.0
+          ),
+          vec2(
+            0.0,
+            127.0 / 547.0
+          )
+        );
+
+      vec3 plate =
+        mix(
+          magenta,
+          cobalt,
+          blueMask
+        );
+
+      plate =
+        mix(
+          plate,
+          black,
+          blackMask
+        );
+
+      return plate;
     }
 
     void main() {
@@ -726,13 +877,12 @@
         It does NOT inherit the moving geometry's +0.18 pan.
       */
       vec3 plates =
-        texture(
-          u_underpaint,
+        exactUnderpaint(
           vec2(
             v_uv.x,
             1.0 - v_uv.y
           )
-        ).rgb;
+        );
 
       vec3 movingBase =
         max(
@@ -1004,95 +1154,6 @@
       "u_zoomMode"
     );
 
-  const uUnderpaint =
-    gl.getUniformLocation(
-      program,
-      "u_underpaint"
-    );
-
-  const underpaintTexture =
-    gl.createTexture();
-
-  gl.bindTexture(
-    gl.TEXTURE_2D,
-    underpaintTexture
-  );
-
-  /*
-    Safe 1x1 fallback while the SVG loads.
-  */
-  gl.texImage2D(
-    gl.TEXTURE_2D,
-    0,
-    gl.RGBA,
-    1,
-    1,
-    0,
-    gl.RGBA,
-    gl.UNSIGNED_BYTE,
-    new Uint8Array([
-      250,
-      24,
-      209,
-      255
-    ])
-  );
-
-  gl.texParameteri(
-    gl.TEXTURE_2D,
-    gl.TEXTURE_MIN_FILTER,
-    gl.LINEAR
-  );
-
-  gl.texParameteri(
-    gl.TEXTURE_2D,
-    gl.TEXTURE_MAG_FILTER,
-    gl.LINEAR
-  );
-
-  gl.texParameteri(
-    gl.TEXTURE_2D,
-    gl.TEXTURE_WRAP_S,
-    gl.CLAMP_TO_EDGE
-  );
-
-  gl.texParameteri(
-    gl.TEXTURE_2D,
-    gl.TEXTURE_WRAP_T,
-    gl.CLAMP_TO_EDGE
-  );
-
-  const underpaintImage =
-    new Image();
-
-  underpaintImage.addEventListener(
-    "load",
-    () => {
-      gl.bindTexture(
-        gl.TEXTURE_2D,
-        underpaintTexture
-      );
-
-      gl.pixelStorei(
-        gl.UNPACK_FLIP_Y_WEBGL,
-        false
-      );
-
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        underpaintImage
-      );
-    },
-    { once: true }
-  );
-
-  underpaintImage.src =
-    "./underpaint.svg?v=20261112-1";
-
   function resize() {
     /*
       Stage 3 is trivial enough that 1.5 DPR gives a clean preview while
@@ -1207,22 +1268,6 @@
       gl.uniform1f(
         uZoomMode,
         zoomMode
-      );
-    }
-
-    gl.activeTexture(
-      gl.TEXTURE0
-    );
-
-    gl.bindTexture(
-      gl.TEXTURE_2D,
-      underpaintTexture
-    );
-
-    if (uUnderpaint) {
-      gl.uniform1i(
-        uUnderpaint,
-        0
       );
     }
 
