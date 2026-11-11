@@ -1,0 +1,40 @@
+/* Stage 4.1 — creator-style blurred duplicate test */
+
+.stage__canvas--sharp,
+.stage__canvas--glow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.stage__canvas--sharp {
+  z-index: 1;
+}
+
+.stage__canvas--glow {
+  z-index: 2;
+  pointer-events: none;
+
+  /*
+    Heavy lens-blur analogue + Lighten/Screen.
+    Slight independent scale/skew acts as the first corner-pin proxy.
+  */
+  filter:
+    blur(24px)
+    saturate(1.14);
+
+  mix-blend-mode: screen;
+  opacity: 0.48;
+
+  transform:
+    translate3d(1.6%, -0.8%, 0)
+    scale(1.055, 1.03)
+    skewX(-1.7deg);
+
+  transform-origin: 52% 48%;
+}
+
+.stage__status {
+  z-index: 3;
+}
