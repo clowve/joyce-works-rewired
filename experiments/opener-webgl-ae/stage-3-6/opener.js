@@ -71,7 +71,11 @@
         );
 
       float stripeDensity =
-        1.46;
+        mix(
+          1.72,
+          1.38,
+          u_zoomMode
+        );
 
       float zoomCoord =
         log2(d) * stripeDensity -
@@ -362,23 +366,22 @@
     void main() {
       /*
         Stage 3.6 framing experiment:
-        "camera" into the successful centre-right portion of Stage 3.4
-        so its magenta/blue intersections occupy most of the canvas.
+        pan toward the successful centre-right behavior from Stage 3.4
+        while preserving the original scale and band spacing.
 
-        This is a composition crop, not a new motion system.
+        This is a composition translation only, not a crop or zoom.
+      */
+      /*
+        Stage 3.6 correction:
+        preserve the exact Stage 3.4 scale and bar spacing.
+        We PAN the composition only, rather than cropping / rescaling it.
+        The +0.18 x-offset moves the source convergence just off the
+        left edge while keeping every band's apparent width unchanged.
       */
       vec2 uv =
         vec2(
-          mix(
-            0.34,
-            1.00,
-            v_uv.x
-          ),
-          mix(
-            0.08,
-            0.72,
-            v_uv.y
-          )
+          v_uv.x + 0.18,
+          v_uv.y
         );
 
       float motion =
