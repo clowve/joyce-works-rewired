@@ -203,15 +203,15 @@
 
       return
         smoothstep(
+          0.06,
           0.08,
-          0.11,
           cell
         ) *
         (
           1.0 -
           smoothstep(
-            0.31,
-            0.34,
+            0.56,
+            0.58,
             cell
           )
         );
