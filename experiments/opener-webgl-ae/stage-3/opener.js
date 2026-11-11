@@ -158,31 +158,17 @@
       float motion
     ) {
       /*
-        Stage 3.2: the reference becomes much more elastic toward the
-        right side, so ripple strength now ramps with x-position.
+        Stage 3.3: keep the ordinary ripple readable but restrained.
+        The heavier right-side distortion now comes from a separate
+        funhouse-mirror remap instead of simply increasing sine wobble.
       */
-      float rightWeight =
-        mix(
-          0.52,
-          1.92,
-          smoothstep(
-            0.10,
-            0.96,
-            uv.x
-          )
-        );
-
-      float weightedAmount =
-        amount *
-        rightWeight;
-
       uv.x +=
         sin(
           uv.y * 15.0 +
           motion * 2.15 +
           phase
         ) *
-        weightedAmount;
+        amount;
 
       uv.x +=
         sin(
@@ -190,8 +176,78 @@
           motion * 1.35 +
           phase * 1.7
         ) *
-        weightedAmount *
-        0.34;
+        amount *
+        0.28;
+
+      return uv;
+    }
+
+    vec2 funhouseRight(
+      vec2 uv,
+      float phase,
+      float motion
+    ) {
+      /*
+        Broad row-by-row magnification + nonlinear stretch on the right.
+        This is intentionally more "house of mirrors" than "wavy".
+      */
+      float rightMask =
+        smoothstep(
+          0.46,
+          0.98,
+          uv.x
+        );
+
+      float rowMagnification =
+        1.0 +
+        rightMask *
+        (
+          sin(
+            uv.y * 4.6 +
+            motion * 0.42 +
+            phase
+          ) * 0.58 +
+          sin(
+            uv.y * 9.4 -
+            motion * 0.24 +
+            phase * 1.7
+          ) * 0.24
+        );
+
+      rowMagnification =
+        clamp(
+          rowMagnification,
+          0.34,
+          1.82
+        );
+
+      const float pivotX = 0.72;
+
+      float dx =
+        uv.x -
+        pivotX;
+
+      uv.x =
+        pivotX +
+        dx /
+        rowMagnification;
+
+      float curvedDx =
+        uv.x -
+        pivotX;
+
+      uv.x +=
+        rightMask *
+        curvedDx *
+        abs(curvedDx) *
+        (
+          0.72 +
+          0.18 *
+          sin(
+            uv.y * 6.2 +
+            phase
+          )
+        );
 
       return uv;
     }
@@ -238,25 +294,44 @@
       float phase
     ) {
       /*
-        Stage 3.2: a second runner duplicate, same /// vocabulary but
+        Stage 3.3: a second runner duplicate, same /// vocabulary but
         moving at nearly twice the speed and carrying its own waviness.
       */
       float fastMotion =
-        motion * 1.92;
+        motion * 3.55;
+
+      /*
+        The fast runner is most distorted around the centre and becomes
+        much calmer toward the far-left edge, matching the reference.
+      */
+      float centreWarpWeight =
+        mix(
+          0.14,
+          1.0,
+          smoothstep(
+            0.02,
+            0.48,
+            uv.x
+          )
+        );
 
       float wave =
         sin(
-          uv.y * 18.0 -
-          fastMotion * 2.10 +
+          uv.y * 16.0 -
+          fastMotion * 2.45 +
           phase
-        ) * 0.028;
+        ) *
+        0.050 *
+        centreWarpWeight;
 
       wave +=
         sin(
-          uv.y * 41.0 +
-          fastMotion * 1.15 +
+          uv.y * 37.0 +
+          fastMotion * 1.35 +
           phase * 1.9
-        ) * 0.010;
+        ) *
+        0.018 *
+        centreWarpWeight;
 
       vec2 q = uv;
       q.x += wave;
@@ -295,7 +370,7 @@
         reducedMotionPlaceholder; // replaced in JS before compilation
 
       /*
-        Stage 3.2: apply a DIFFERENT corner-pin transform to each approved
+        Stage 3.3: apply a DIFFERENT corner-pin transform to each approved
         Stage 2 colour duplicate.
 
         Red leans into the left-side V / funnel.
@@ -312,10 +387,17 @@
         );
 
       redUV =
+        funhouseRight(
+          redUV,
+          0.8,
+          motion
+        );
+
+      redUV =
         rippleLayer(
           redUV,
           0.8,
-          0.014,
+          0.011,
           motion
         );
 
@@ -328,15 +410,22 @@
           0.86
         );
 
+      blueUV =
+        funhouseRight(
+          blueUV,
+          2.4,
+          motion
+        );
+
       /*
-        Blue keeps a cleaner geometry so the layer contrast stays legible.
+        Blue keeps only a small fine ripple after the broad mirror warp.
       */
       blueUV.x +=
         sin(
           blueUV.y * 17.0 -
           motion * 1.55 +
           2.4
-        ) * 0.0045;
+        ) * 0.0032;
 
       vec2 violetUV =
         cornerPinApprox(
@@ -348,10 +437,17 @@
         );
 
       violetUV =
+        funhouseRight(
+          violetUV,
+          4.1,
+          motion
+        );
+
+      violetUV =
         rippleLayer(
           violetUV,
           4.1,
-          0.008,
+          0.0065,
           motion
         );
 
@@ -418,7 +514,7 @@
           0.38,
           1.00
         ) *
-        0.78;
+        0.94;
 
       float rippledRunnerStripe =
         rippledRunnerStripeField(
@@ -430,11 +526,34 @@
       vec3 rippledRunnerLayer =
         rippledRunnerStripe *
         vec3(
-          0.54,
-          0.10,
-          0.94
+          0.62,
+          0.12,
+          1.00
         ) *
-        0.46;
+        0.74;
+
+      /*
+        The upper runner planes obscure the underlying convergence point
+        across the left/centre instead of letting the base fan dominate.
+      */
+      float runnerCoverZone =
+        1.0 -
+        smoothstep(
+          0.50,
+          0.78,
+          uv.x
+        );
+
+      float baseVisibility =
+        mix(
+          1.0,
+          0.42,
+          runnerCoverZone
+        );
+
+      redLayer *= baseVisibility;
+      blueLayer *= baseVisibility;
+      violetLayer *= baseVisibility;
 
       /*
         AE-style Lighten approximation:
