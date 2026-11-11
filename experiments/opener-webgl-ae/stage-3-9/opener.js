@@ -744,9 +744,68 @@
         );
 
       /*
-        Broad structural occupancy from the EXISTING base stripes.
-        Where several warped copies overlap, darken the plate strongly.
-        Single-colour regions keep more of the vivid underpainting.
+        Stage 3.9.1:
+        the SVG is now a MATTE / TINT MAP, not merely a picture beneath
+        a Lighten stack.
+
+        - black plate suppresses animated colour completely
+        - magenta plate biases moving structure toward magenta
+        - cobalt plate biases moving structure toward cobalt
+      */
+      float plateBrightness =
+        max(
+          max(
+            plates.r,
+            plates.g
+          ),
+          plates.b
+        );
+
+      float plateGate =
+        smoothstep(
+          0.03,
+          0.16,
+          plateBrightness
+        );
+
+      vec3 plateTint =
+        0.18 +
+        plates * 0.96;
+
+      vec3 tintedMovingBase =
+        movingBase *
+        plateTint *
+        plateGate;
+
+      /*
+        Screen a restrained amount of the actual plate colour into the
+        moving base so the large magenta/cobalt segmentation stays legible
+        even as the animated geometry crosses it.
+      */
+      vec3 platePresence =
+        plates *
+        0.58 *
+        plateGate;
+
+      vec3 screenedBase =
+        1.0 -
+        (
+          1.0 -
+          clamp(
+            tintedMovingBase,
+            0.0,
+            1.0
+          )
+        ) *
+        (
+          1.0 -
+          platePresence
+        );
+
+      /*
+        Keep real dark cavities from Stage 3.7 using the existing stripe
+        overlaps. The black SVG wedge also stays absolute because its
+        plateGate is zero.
       */
       float baseStructure =
         clamp(
@@ -776,70 +835,43 @@
           1.0
         );
 
-      /*
-        Make the structural cuts broad and confident rather than thin.
-        This darkens the underpainting from its own geometry instead of
-        painting a separate black ribbon on top.
-      */
       float darkStructure =
         smoothstep(
-          0.34,
-          0.82,
-          baseStructure * 0.54 +
-          overlapStructure * 0.88
+          0.36,
+          0.84,
+          baseStructure * 0.50 +
+          overlapStructure * 0.92
         );
 
-      vec3 structuredPlate =
+      vec3 structuredBase =
         mix(
-          plates,
+          screenedBase,
           vec3(0.0),
-          darkStructure * 0.78
-        );
+          darkStructure * 0.72
+        ) *
+        plateGate;
 
       /*
-        Screen/lighten-like colour interaction:
-        the existing Stage 3.7 coloured base sits over the plate, while
-        the plate remains visible enough to establish big magenta/cobalt
-        regions and keep colour segmentation legible.
+        Runners remain top planes mechanically, but now inherit the same
+        screen-fixed plate segmentation instead of wiping it away.
       */
-      vec3 platedBase =
-        max(
-          structuredPlate,
-          movingBase * 0.90
-        );
+      vec3 tintedRunner =
+        runnerLayer *
+        plateTint *
+        plateGate;
 
-      /*
-        Encourage the successful blue-on-blue fusion from the right to
-        happen earlier through the centre without changing any geometry.
-      */
-      float blueMergeZone =
-        smoothstep(
-          0.26,
-          0.72,
-          uv.x
-        );
+      vec3 tintedRippledRunner =
+        rippledRunnerLayer *
+        plateTint *
+        plateGate;
 
-      platedBase =
-        max(
-          platedBase,
-          blueLayer *
-          (
-            0.74 +
-            blueMergeZone * 0.38
-          )
-        );
-
-      /*
-        The two /// runner systems remain the top planes exactly as in
-        Stage 3.7.
-      */
       vec3 color =
         max(
           max(
-            platedBase,
-            runnerLayer
+            structuredBase,
+            tintedRunner
           ),
-          rippledRunnerLayer
+          tintedRippledRunner
         );
 
       outColor =
