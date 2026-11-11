@@ -547,11 +547,9 @@
     void main() {
       /*
         Stage 3.11 active plate interaction:
-        keep Stage 3 mechanics and colours, but let the screen-fixed
-        magenta/cobalt plate enter each moving layer BEFORE final Lighten.
-      */
-        keep Stage 3 scale / colour behavior,
-        but pan the moving geometry only so the vanishing point stays
+        keep Stage 3 mechanics and colours, let the screen-fixed
+        magenta/cobalt plate enter each moving layer BEFORE final Lighten,
+        and keep the later +0.18 pan so the vanishing point stays
         outside the left edge.
       */
       vec2 uv =
