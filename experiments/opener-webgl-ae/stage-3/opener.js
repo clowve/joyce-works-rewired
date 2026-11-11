@@ -158,16 +158,31 @@
       float motion
     ) {
       /*
-        Ripple is kept subtle and layer-specific, matching the original
-        workflow where only some duplicates received extra deformation.
+        Stage 3.2: the reference becomes much more elastic toward the
+        right side, so ripple strength now ramps with x-position.
       */
+      float rightWeight =
+        mix(
+          0.52,
+          1.92,
+          smoothstep(
+            0.10,
+            0.96,
+            uv.x
+          )
+        );
+
+      float weightedAmount =
+        amount *
+        rightWeight;
+
       uv.x +=
         sin(
           uv.y * 15.0 +
           motion * 2.15 +
           phase
         ) *
-        amount;
+        weightedAmount;
 
       uv.x +=
         sin(
@@ -175,7 +190,7 @@
           motion * 1.35 +
           phase * 1.7
         ) *
-        amount *
+        weightedAmount *
         0.34;
 
       return uv;
@@ -217,6 +232,62 @@
         );
     }
 
+    float rippledRunnerStripeField(
+      vec2 uv,
+      float motion,
+      float phase
+    ) {
+      /*
+        Stage 3.2: a second runner duplicate, same /// vocabulary but
+        moving at nearly twice the speed and carrying its own waviness.
+      */
+      float fastMotion =
+        motion * 1.92;
+
+      float wave =
+        sin(
+          uv.y * 18.0 -
+          fastMotion * 2.10 +
+          phase
+        ) * 0.028;
+
+      wave +=
+        sin(
+          uv.y * 41.0 +
+          fastMotion * 1.15 +
+          phase * 1.9
+        ) * 0.010;
+
+      vec2 q = uv;
+      q.x += wave;
+
+      float coord =
+        (
+          q.x -
+          q.y * 0.34
+        ) * 6.15 +
+        fastMotion * 1.05 +
+        phase;
+
+      float cell =
+        fract(coord);
+
+      return
+        smoothstep(
+          0.06,
+          0.08,
+          cell
+        ) *
+        (
+          1.0 -
+          smoothstep(
+            0.56,
+            0.58,
+            cell
+          )
+        );
+    }
+
     void main() {
       vec2 uv = v_uv;
 
@@ -224,7 +295,7 @@
         reducedMotionPlaceholder; // replaced in JS before compilation
 
       /*
-        Stage 3.1: apply a DIFFERENT corner-pin transform to each approved
+        Stage 3.2: apply a DIFFERENT corner-pin transform to each approved
         Stage 2 colour duplicate.
 
         Red leans into the left-side V / funnel.
@@ -349,6 +420,22 @@
         ) *
         0.78;
 
+      float rippledRunnerStripe =
+        rippledRunnerStripeField(
+          uv,
+          motion,
+          2.35
+        );
+
+      vec3 rippledRunnerLayer =
+        rippledRunnerStripe *
+        vec3(
+          0.54,
+          0.10,
+          0.94
+        ) *
+        0.46;
+
       /*
         AE-style Lighten approximation:
         each output channel keeps the brighter value from the duplicates.
@@ -359,12 +446,15 @@
         max(
           max(
             max(
-              redLayer,
-              blueLayer
+              max(
+                redLayer,
+                blueLayer
+              ),
+              violetLayer
             ),
-            violetLayer
+            runnerLayer
           ),
-          runnerLayer
+          rippledRunnerLayer
         );
 
       outColor =
