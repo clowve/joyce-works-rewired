@@ -44,13 +44,17 @@
 
     float stripeField(float x, float motion) {
       /*
-        A log-spaced stripe field lets the pattern continuously expand
-        away from the centre without a visible jump when the cycle wraps.
-        At this stage it is deliberately just black + white.
+        Stage 1.1 composition correction:
+        the source loop's apparent zoom origin sits well left of screen
+        centre, closer to the original reference. We keep the stripe
+        geometry itself simple here; the strong diagonal fan / corner-pin
+        perspective belongs to Stage 3.
       */
+      const float sourceOriginX = 0.14;
+
       float d =
         max(
-          abs(x - 0.5),
+          abs(x - sourceOriginX),
           0.0007
         );
 
