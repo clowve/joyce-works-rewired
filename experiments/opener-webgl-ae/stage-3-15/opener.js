@@ -131,7 +131,7 @@
         );
 
       float coord =
-        log2(d) * 0.52 -
+        log2(d) * 0.76 -
         motion +
         phase;
 
@@ -140,15 +140,15 @@
 
       return
         smoothstep(
-          0.10,
-          0.15,
+          0.18,
+          0.23,
           cell
         ) *
         (
           1.0 -
           smoothstep(
-            0.82,
-            0.87,
+            0.70,
+            0.76,
             cell
           )
         );
@@ -657,47 +657,47 @@
       vec2 broadMagentaUV =
         cornerPinApprox(
           uv,
-          0.13,
-          -0.16,
-          2.55,
-          3.25
+          0.10,
+          -0.14,
+          2.10,
+          2.70
         );
 
       broadMagentaUV =
         rippleLayer(
           broadMagentaUV,
           1.55,
-          0.0055,
-          motion * 0.16
+          0.0035,
+          motion * 0.26
         );
 
       vec2 broadBlueUV =
         cornerPinApprox(
           uv,
-          -0.16,
-          0.13,
-          3.05,
-          2.35
+          -0.13,
+          0.10,
+          2.55,
+          1.95
         );
 
       broadBlueUV =
         funhouseRight(
           broadBlueUV,
           3.15,
-          motion * 0.20
+          motion * 0.30
         );
 
       float broadMagentaStripe =
         macroStripeField(
           broadMagentaUV.x - 0.010,
-          motion * 0.060,
+          motion * 0.11,
           0.18
         );
 
       float broadBlueStripe =
         macroStripeField(
           broadBlueUV.x + 0.018,
-          motion * 0.048,
+          motion * 0.09,
           -0.08
         );
 
@@ -714,7 +714,7 @@
           0.70
         ) *
         magentaRegion *
-        0.90;
+        0.72;
 
       vec3 broadBlueLayer =
         broadBlueStripe *
@@ -724,7 +724,7 @@
           1.00
         ) *
         blueRegion *
-        0.92;
+        0.78;
 
       vec3 redLayer =
         redStripe *
