@@ -778,7 +778,7 @@
 
       /*
         Exact black/magenta/cobalt artwork sits BEHIND the animation.
-        It never gates, mattes, suppresses, or replaces a moving layer.
+        It never gates or cuts the moving layers away.
       */
       vec3 plates =
         exactUnderpaint(
@@ -798,40 +798,84 @@
         );
 
       /*
-        A faint plate presence is visible only through genuine openings.
-        This is enough to establish broad regional zoning without filling
-        every black gap with saturated colour.
-      */
-      vec3 plateAmbient =
-        plates *
-        0.11;
+        Stage 3.10.1:
+        make the moving stack slightly translucent to the underpainting
+        so the large plate geometry can actually be perceived.
 
-      /*
-        Gentle regional bias on already-visible colour.
-        Because this is additive/screen-like rather than a tint replacement,
-        blue/red/magenta misregistration stays independently legible.
+        This is a true background influence, not a matte:
+        - magenta/cobalt softly show through the moving colours
+        - black only darkens what passes above it
+        - chromatic misregistration remains intact
       */
-      vec3 colourBias =
+      float plateBrightness =
+        max(
+          max(
+            plates.r,
+            plates.g
+          ),
+          plates.b
+        );
+
+      float blackPlate =
+        1.0 -
+        smoothstep(
+          0.02,
+          0.12,
+          plateBrightness
+        );
+
+      vec3 colourPlate =
+        plates *
         (
           1.0 -
-          movingColor
-        ) *
-        plates *
-        layerEnergy *
-        0.10;
-
-      vec3 colourRichness =
-        clamp(
-          movingColor +
-          colourBias,
-          0.0,
-          1.0
+          blackPlate
         );
+
+      /*
+        Regional plate visibility is stronger than 3.10, but still mild
+        enough that Stage 3's individual red/blue/violet edges survive.
+      */
+      vec3 colourUnderlay =
+        mix(
+          movingColor,
+          max(
+            movingColor,
+            colourPlate * 0.72
+          ),
+          0.28
+        );
+
+      /*
+        Black behaves like literal black paint underneath translucent
+        animation: it dims the stack, rather than slicing it out.
+      */
+      vec3 blackUnderlay =
+        colourUnderlay *
+        mix(
+          1.0,
+          0.68,
+          blackPlate
+        );
+
+      /*
+        Keep the plate visible through true low-energy openings as well.
+      */
+      vec3 gapUnderlay =
+        colourPlate *
+        (
+          1.0 -
+          smoothstep(
+            0.06,
+            0.34,
+            layerEnergy
+          )
+        ) *
+        0.42;
 
       vec3 color =
         max(
-          plateAmbient,
-          colourRichness
+          blackUnderlay,
+          gapUnderlay
         );
 
       outColor =
