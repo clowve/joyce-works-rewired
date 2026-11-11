@@ -26,6 +26,44 @@
     in vec2 a_position;
     out vec2 v_uv;
 
+    float runnerStripeField(
+      vec2 uv,
+      float motion,
+      float phase
+    ) {
+      /*
+        Stage 3.1 overlay duplicate:
+        a much flatter diagonal band system with steady leftward travel.
+        It represents the less aggressively distorted duplicate visible
+        over the large fan shapes in the reference.
+      */
+      float coord =
+        (
+          uv.x +
+          uv.y * 0.34
+        ) * 6.15 +
+        motion * 1.05 +
+        phase;
+
+      float cell =
+        fract(coord);
+
+      return
+        smoothstep(
+          0.08,
+          0.11,
+          cell
+        ) *
+        (
+          1.0 -
+          smoothstep(
+            0.31,
+            0.34,
+            cell
+          )
+        );
+    }
+
     void main() {
       v_uv = a_position * 0.5 + 0.5;
       gl_Position = vec4(a_position, 0.0, 1.0);
@@ -169,7 +207,7 @@
         reducedMotionPlaceholder; // replaced in JS before compilation
 
       /*
-        Stage 3: apply a DIFFERENT corner-pin transform to each approved
+        Stage 3.1: apply a DIFFERENT corner-pin transform to each approved
         Stage 2 colour duplicate.
 
         Red leans into the left-side V / funnel.
@@ -181,8 +219,8 @@
           uv,
           0.055,
           -0.105,
-          0.78,
-          1.34
+          0.88,
+          1.18
         );
 
       redUV =
@@ -198,8 +236,8 @@
           uv,
           -0.035,
           0.115,
-          1.28,
-          0.74
+          1.16,
+          0.86
         );
 
       /*
@@ -217,8 +255,8 @@
           uv,
           0.020,
           -0.028,
-          0.96,
-          1.12
+          0.98,
+          1.08
         );
 
       violetUV =
@@ -273,6 +311,28 @@
         0.58;
 
       /*
+        Flatter runner duplicate. Unlike the large fanned copies, this
+        layer keeps a regular diagonal rhythm and simply travels leftward.
+        A cool tint lets it read as a distinct plane while Lighten keeps
+        the intersections luminous.
+      */
+      float runnerStripe =
+        runnerStripeField(
+          uv,
+          motion,
+          0.72
+        );
+
+      vec3 runnerLayer =
+        runnerStripe *
+        vec3(
+          0.08,
+          0.38,
+          1.00
+        ) *
+        0.78;
+
+      /*
         AE-style Lighten approximation:
         each output channel keeps the brighter value from the duplicates.
         Where red and blue overlap, both channels survive and naturally
@@ -281,10 +341,13 @@
       vec3 color =
         max(
           max(
-            redLayer,
-            blueLayer
+            max(
+              redLayer,
+              blueLayer
+            ),
+            violetLayer
           ),
-          violetLayer
+          runnerLayer
         );
 
       outColor =
