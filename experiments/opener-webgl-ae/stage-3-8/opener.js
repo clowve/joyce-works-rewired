@@ -363,12 +363,24 @@
         );
     }
 
-    vec3 underpaintPlates(vec2 uv) {
+    float edgeMask(float value) {
+      return smoothstep(
+        -0.004,
+        0.004,
+        value
+      );
+    }
+
+    vec3 underpaintPlates(vec2 screenUV) {
       /*
-        Stage 3.8: hard-edged colour plates UNDER the moving geometry.
-        This follows Joyce's current visual hypothesis:
-        black wedge upper-left, dominant magenta field, cobalt field right.
-        These are deliberately graphic slabs, not a gradient.
+        Stage 3.8.1:
+        the underpainting is SCREEN-LOCKED, independent of the +0.18
+        composition pan used by the moving stripe geometry.
+
+        Geometry follows Joyce's mockup:
+        - black angular wedge at upper-left
+        - dominant hot-magenta field
+        - cobalt triangular plate entering from upper-right
       */
       vec3 blackPlate =
         vec3(
@@ -380,59 +392,107 @@
       vec3 magentaPlate =
         vec3(
           1.00,
-          0.025,
+          0.020,
           0.76
         );
 
       vec3 cobaltPlate =
         vec3(
-          0.020,
-          0.18,
+          0.025,
+          0.12,
           1.00
         );
 
       /*
-        Right-side cobalt diagonal plate.
-        The split is intentionally hard with only a tiny AA feather.
+        Cobalt triangle:
+        top boundary begins around 52% of the canvas;
+        diagonal exits near the lower-right edge.
       */
-      float blueSplit =
-        smoothstep(
-          -0.006,
-          0.006,
+      float blueBoundary =
+        (
+          screenUV.x -
           (
-            uv.x +
-            uv.y * 0.72
-          ) -
-          1.00
+            0.52 +
+            (1.0 - screenUV.y) * 0.47
+          )
+        );
+
+      float blueMask =
+        edgeMask(
+          blueBoundary
         );
 
       vec3 plate =
         mix(
           magentaPlate,
           cobaltPlate,
-          blueSplit
+          blueMask
         );
 
       /*
-        Upper-left black wedge, shaped from Joyce's mockup.
+        Black upper-left quadrilateral approximating the supplied artwork:
+          top edge: x 0.00 -> 0.27
+          inner point: ~0.06, y 0.58
+          left return: x 0.00, y ~0.77
+
+        Construct it from two sloping boundaries, then constrain it to
+        the upper-left region.
       */
-      float blackWedge =
+      float upperDiagonal =
+        screenUV.y -
+        (
+          0.50 +
+          screenUV.x * 1.84
+        );
+
+      float lowerDiagonal =
+        screenUV.y -
+        (
+          0.77 -
+          screenUV.x * 3.18
+        );
+
+      float blackUpper =
+        edgeMask(
+          upperDiagonal
+        );
+
+      float blackLower =
         1.0 -
-        smoothstep(
-          -0.006,
-          0.006,
-          uv.y -
-          (
-            0.36 -
-            uv.x * 1.16
-          )
+        edgeMask(
+          lowerDiagonal
+        );
+
+      float blackTopCap =
+        edgeMask(
+          screenUV.y -
+          0.575
+        );
+
+      float blackLeftCap =
+        1.0 -
+        edgeMask(
+          screenUV.x -
+          0.275
+        );
+
+      float blackMask =
+        max(
+          blackUpper * blackLeftCap,
+          blackLower *
+          blackTopCap *
+          blackLeftCap
         );
 
       plate =
         mix(
           plate,
           blackPlate,
-          blackWedge
+          clamp(
+            blackMask,
+            0.0,
+            1.0
+          )
         );
 
       return plate;
@@ -796,7 +856,7 @@
       */
       vec3 plates =
         underpaintPlates(
-          uv
+          v_uv
         );
 
       vec3 movingBase =
