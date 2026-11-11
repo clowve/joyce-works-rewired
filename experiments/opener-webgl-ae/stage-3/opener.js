@@ -158,7 +158,7 @@
       float motion
     ) {
       /*
-        Stage 3.3: keep the ordinary ripple readable but restrained.
+        Stage 3.4: keep the ordinary ripple readable but restrained.
         The heavier right-side distortion now comes from a separate
         funhouse-mirror remap instead of simply increasing sine wobble.
       */
@@ -294,7 +294,7 @@
       float phase
     ) {
       /*
-        Stage 3.3: a second runner duplicate, same /// vocabulary but
+        Stage 3.4: a second runner duplicate, same /// vocabulary but
         moving at nearly twice the speed and carrying its own waviness.
       */
       float fastMotion =
@@ -370,7 +370,7 @@
         reducedMotionPlaceholder; // replaced in JS before compilation
 
       /*
-        Stage 3.3: apply a DIFFERENT corner-pin transform to each approved
+        Stage 3.4: apply a DIFFERENT corner-pin transform to each approved
         Stage 2 colour duplicate.
 
         Red leans into the left-side V / funnel.
@@ -507,14 +507,38 @@
           0.72
         );
 
+      /*
+        Stage 3.4 colour rebalance:
+        preserve the runner geometry exactly, but stop the upper planes
+        from collapsing the whole frame into blue. The clean runner shifts
+        from magenta on the left toward electric blue on the right.
+      */
+      float runnerColourMix =
+        smoothstep(
+          0.24,
+          0.82,
+          uv.x
+        );
+
+      vec3 runnerTint =
+        mix(
+          vec3(
+            1.00,
+            0.07,
+            0.40
+          ),
+          vec3(
+            0.06,
+            0.34,
+            1.00
+          ),
+          runnerColourMix
+        );
+
       vec3 runnerLayer =
         runnerStripe *
-        vec3(
-          0.08,
-          0.38,
-          1.00
-        ) *
-        0.94;
+        runnerTint *
+        0.91;
 
       float rippledRunnerStripe =
         rippledRunnerStripeField(
@@ -523,14 +547,33 @@
           2.35
         );
 
+      /*
+        Keep the fast runner hotter / more magenta so it counterbalances
+        the clean blue runner without changing its motion at all.
+      */
+      vec3 rippledRunnerTint =
+        mix(
+          vec3(
+            1.00,
+            0.045,
+            0.30
+          ),
+          vec3(
+            0.62,
+            0.10,
+            1.00
+          ),
+          smoothstep(
+            0.42,
+            0.92,
+            uv.x
+          )
+        );
+
       vec3 rippledRunnerLayer =
         rippledRunnerStripe *
-        vec3(
-          0.62,
-          0.12,
-          1.00
-        ) *
-        0.74;
+        rippledRunnerTint *
+        0.72;
 
       /*
         The upper runner planes obscure the underlying convergence point
@@ -547,7 +590,7 @@
       float baseVisibility =
         mix(
           1.0,
-          0.42,
+          0.54,
           runnerCoverZone
         );
 
