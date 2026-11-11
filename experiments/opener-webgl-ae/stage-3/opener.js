@@ -192,7 +192,7 @@
       */
       float coord =
         (
-          uv.x +
+          uv.x -
           uv.y * 0.34
         ) * 6.15 +
         motion * 1.05 +
