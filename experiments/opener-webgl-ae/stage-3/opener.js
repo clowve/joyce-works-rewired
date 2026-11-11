@@ -9,6 +9,17 @@
   const reducedMotion =
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  /*
+    Stage 3 comparison:
+      default          -> current pulled-back stripe scale
+      ?zoom=original   -> closer / larger stripe scale, closer to GIF
+  */
+  const zoomMode =
+    new URLSearchParams(window.location.search)
+      .get("zoom") === "original"
+      ? 1
+      : 0;
+
   const gl = canvas.getContext("webgl2", {
     alpha: false,
     antialias: false,
@@ -26,44 +37,6 @@
     in vec2 a_position;
     out vec2 v_uv;
 
-    float runnerStripeField(
-      vec2 uv,
-      float motion,
-      float phase
-    ) {
-      /*
-        Stage 3.1 overlay duplicate:
-        a much flatter diagonal band system with steady leftward travel.
-        It represents the less aggressively distorted duplicate visible
-        over the large fan shapes in the reference.
-      */
-      float coord =
-        (
-          uv.x +
-          uv.y * 0.34
-        ) * 6.15 +
-        motion * 1.05 +
-        phase;
-
-      float cell =
-        fract(coord);
-
-      return
-        smoothstep(
-          0.08,
-          0.11,
-          cell
-        ) *
-        (
-          1.0 -
-          smoothstep(
-            0.31,
-            0.34,
-            cell
-          )
-        );
-    }
-
     void main() {
       v_uv = a_position * 0.5 + 0.5;
       gl_Position = vec4(a_position, 0.0, 1.0);
@@ -76,6 +49,7 @@
     uniform vec2 u_resolution;
     uniform float u_time;
     uniform float u_motion;
+    uniform float u_zoomMode;
 
     in vec2 v_uv;
     out vec4 outColor;
@@ -96,8 +70,15 @@
           0.0007
         );
 
+      float stripeDensity =
+        mix(
+          1.72,
+          1.38,
+          u_zoomMode
+        );
+
       float zoomCoord =
-        log2(d) * 1.72 -
+        log2(d) * stripeDensity -
         motion;
 
       float cell =
@@ -198,6 +179,42 @@
         0.34;
 
       return uv;
+    }
+
+    float runnerStripeField(
+      vec2 uv,
+      float motion,
+      float phase
+    ) {
+      /*
+        Stage 3.1 overlay duplicate:
+        a flatter diagonal band system with steady leftward travel.
+      */
+      float coord =
+        (
+          uv.x +
+          uv.y * 0.34
+        ) * 6.15 +
+        motion * 1.05 +
+        phase;
+
+      float cell =
+        fract(coord);
+
+      return
+        smoothstep(
+          0.08,
+          0.11,
+          cell
+        ) *
+        (
+          1.0 -
+          smoothstep(
+            0.31,
+            0.34,
+            cell
+          )
+        );
     }
 
     void main() {
@@ -474,6 +491,12 @@
       "u_motion"
     );
 
+  const uZoomMode =
+    gl.getUniformLocation(
+      program,
+      "u_zoomMode"
+    );
+
   function resize() {
     /*
       Stage 3 is trivial enough that 1.5 DPR gives a clean preview while
@@ -581,6 +604,13 @@
       gl.uniform1f(
         uMotion,
         motion
+      );
+    }
+
+    if (uZoomMode) {
+      gl.uniform1f(
+        uZoomMode,
+        zoomMode
       );
     }
 
