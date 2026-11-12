@@ -1,0 +1,1290 @@
+(() => {
+  "use strict";
+
+  const root = document.querySelector("[data-stage-root]");
+  const canvas = document.querySelector("[data-stage-canvas]");
+
+  if (!root || !canvas) return;
+
+  const reducedMotion =
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /*
+    Stage 3 comparison:
+      default          -> current pulled-back stripe scale
+      ?zoom=original   -> closer / larger stripe scale, closer to GIF
+  */
+  const zoomMode =
+    new URLSearchParams(window.location.search)
+      .get("zoom") === "original"
+      ? 1
+      : 0;
+
+  const gl = canvas.getContext("webgl2", {
+    alpha: false,
+    antialias: false,
+    depth: false,
+    stencil: false,
+    powerPreference: "high-performance"
+  });
+
+  if (!gl) {
+    root.classList.add("no-webgl");
+    return;
+  }
+
+  const vertexSource = `#version 300 es
+    in vec2 a_position;
+    out vec2 v_uv;
+
+    void main() {
+      v_uv = a_position * 0.5 + 0.5;
+      gl_Position = vec4(a_position, 0.0, 1.0);
+    }
+  `;
+
+  const fragmentSource = `#version 300 es
+    precision highp float;
+
+    uniform vec2 u_resolution;
+    uniform float u_time;
+    uniform float u_motion;
+    uniform float u_zoomMode;
+
+    in vec2 v_uv;
+    out vec4 outColor;
+
+    float stripeField(float x, float motion) {
+      /*
+        Stage 3.1 composition correction:
+        the source loop's apparent zoom origin sits well left of screen
+        centre, closer to the original reference. We keep the stripe
+        geometry itself simple here; the strong diagonal fan / corner-pin
+        perspective belongs to Stage 3.
+      */
+      const float sourceOriginX = 0.14;
+
+      float d =
+        max(
+          abs(x - sourceOriginX),
+          0.0007
+        );
+
+      float stripeDensity =
+        mix(
+          1.72,
+          1.38,
+          u_zoomMode
+        );
+
+      float zoomCoord =
+        log2(d) * stripeDensity -
+        motion;
+
+      float cell =
+        fract(zoomCoord);
+
+      /*
+        This is still the exact Stage 1 stripe source. Stage 3 changes
+        only duplication, colour and blend behavior.
+      */
+      float stripe =
+        smoothstep(
+          0.46,
+          0.49,
+          cell
+        ) *
+        (
+          1.0 -
+          smoothstep(
+            0.91,
+            0.94,
+            cell
+          )
+        );
+
+      return stripe;
+    }
+
+    vec2 cornerPinApprox(
+      vec2 uv,
+      float topShift,
+      float bottomShift,
+      float topScale,
+      float bottomScale
+    ) {
+      /*
+        WebGL equivalent of the creator's AE Corner Pin idea:
+        each horizontal row is shifted and scaled differently from top
+        to bottom, turning a flat rectangle into an off-axis trapezoid /
+        fan. Because we calculate the inverse sample coordinate here,
+        the stripe source itself stays exactly the approved Stage 1 loop.
+      */
+      float rowShift =
+        mix(
+          bottomShift,
+          topShift,
+          uv.y
+        );
+
+      float rowScale =
+        mix(
+          bottomScale,
+          topScale,
+          uv.y
+        );
+
+      vec2 q = uv;
+
+      q.x =
+        (
+          uv.x -
+          0.5 -
+          rowShift
+        ) /
+        max(
+          rowScale,
+          0.22
+        ) +
+        0.5;
+
+      return q;
+    }
+
+    vec2 rippleLayer(
+      vec2 uv,
+      float phase,
+      float amount,
+      float motion
+    ) {
+      /*
+        Stage 3.4: keep the ordinary ripple readable but restrained.
+        The heavier right-side distortion now comes from a separate
+        funhouse-mirror remap instead of simply increasing sine wobble.
+      */
+      uv.x +=
+        sin(
+          uv.y * 15.0 +
+          motion * 2.15 +
+          phase
+        ) *
+        amount;
+
+      uv.x +=
+        sin(
+          uv.y * 33.0 -
+          motion * 1.35 +
+          phase * 1.7
+        ) *
+        amount *
+        0.28;
+
+      return uv;
+    }
+
+    vec2 funhouseRight(
+      vec2 uv,
+      float phase,
+      float motion
+    ) {
+      /*
+        Broad row-by-row magnification + nonlinear stretch on the right.
+        This is intentionally more "house of mirrors" than "wavy".
+      */
+      float rightMask =
+        smoothstep(
+          0.46,
+          0.98,
+          uv.x
+        );
+
+      float rowMagnification =
+        1.0 +
+        rightMask *
+        (
+          sin(
+            uv.y * 4.6 +
+            motion * 0.42 +
+            phase
+          ) * 0.58 +
+          sin(
+            uv.y * 9.4 -
+            motion * 0.24 +
+            phase * 1.7
+          ) * 0.24
+        );
+
+      rowMagnification =
+        clamp(
+          rowMagnification,
+          0.34,
+          1.82
+        );
+
+      const float pivotX = 0.72;
+
+      float dx =
+        uv.x -
+        pivotX;
+
+      uv.x =
+        pivotX +
+        dx /
+        rowMagnification;
+
+      float curvedDx =
+        uv.x -
+        pivotX;
+
+      uv.x +=
+        rightMask *
+        curvedDx *
+        abs(curvedDx) *
+        (
+          0.72 +
+          0.18 *
+          sin(
+            uv.y * 6.2 +
+            phase
+          )
+        );
+
+      return uv;
+    }
+
+    float runnerStripeField(
+      vec2 uv,
+      float motion,
+      float phase
+    ) {
+      /*
+        Stage 3.1 overlay duplicate:
+        a flatter diagonal band system with steady leftward travel.
+      */
+      float coord =
+        (
+          uv.x -
+          uv.y * 0.34
+        ) * 6.15 +
+        motion * 1.05 +
+        phase;
+
+      float cell =
+        fract(coord);
+
+      return
+        smoothstep(
+          0.06,
+          0.08,
+          cell
+        ) *
+        (
+          1.0 -
+          smoothstep(
+            0.56,
+            0.58,
+            cell
+          )
+        );
+    }
+
+    float rippledRunnerStripeField(
+      vec2 uv,
+      float motion,
+      float phase
+    ) {
+      /*
+        Stage 3.4: a second runner duplicate, same /// vocabulary but
+        moving at nearly twice the speed and carrying its own waviness.
+      */
+      float fastMotion =
+        motion * 3.55;
+
+      /*
+        The fast runner is most distorted around the centre and becomes
+        much calmer toward the far-left edge, matching the reference.
+      */
+      float centreWarpWeight =
+        mix(
+          0.14,
+          1.0,
+          smoothstep(
+            0.02,
+            0.48,
+            uv.x
+          )
+        );
+
+      float wave =
+        sin(
+          uv.y * 16.0 -
+          fastMotion * 2.45 +
+          phase
+        ) *
+        0.050 *
+        centreWarpWeight;
+
+      wave +=
+        sin(
+          uv.y * 37.0 +
+          fastMotion * 1.35 +
+          phase * 1.9
+        ) *
+        0.018 *
+        centreWarpWeight;
+
+      vec2 q = uv;
+      q.x += wave;
+
+      float coord =
+        (
+          q.x -
+          q.y * 0.34
+        ) * 6.15 +
+        fastMotion * 1.05 +
+        phase;
+
+      float cell =
+        fract(coord);
+
+      return
+        smoothstep(
+          0.06,
+          0.08,
+          cell
+        ) *
+        (
+          1.0 -
+          smoothstep(
+            0.56,
+            0.58,
+            cell
+          )
+        );
+    }
+
+    float softMask(
+      float value,
+      float edge0,
+      float edge1
+    ) {
+      return
+        smoothstep(
+          edge0,
+          edge1,
+          value
+        );
+    }
+
+    void main() {
+      /*
+        Stage 3.22B:
+        stationary masks reveal ALTERNATE transformed duplicates.
+
+        Unlike 3.21A, crossing a persistent region now changes the
+        geometry / phase of the moving ribbons themselves.
+      */
+      vec2 uv =
+        vec2(
+          v_uv.x + 0.18,
+          v_uv.y
+        );
+
+      vec2 maskUV =
+        vec2(
+          v_uv.x,
+          1.0 - v_uv.y
+        );
+
+      /*
+        Tiny STATIC warp only. The regions stay locked to the screen.
+      */
+      maskUV.x +=
+        sin(
+          maskUV.y * 5.1 + 0.85
+        ) *
+        0.009;
+
+      maskUV.y +=
+        sin(
+          maskUV.x * 4.4 + 1.65
+        ) *
+        0.006;
+
+      /*
+        Cobalt region: same broad 3.16 diagonal territory, with a tighter
+        transition than the vignette-like 3.21A masks.
+      */
+      float blueShape =
+        softMask(
+          maskUV.x -
+          (
+            0.50 +
+            maskUV.y * 0.46
+          ),
+          -0.010,
+          0.014
+        );
+
+      /*
+        Upper-left darkness: fixed low-coverage territory, not a fill.
+        Shape echoes 3.16 placement but with a softer, slightly bowed edge.
+      */
+      float darkRightEdge =
+        mix(
+          0.275,
+          0.065,
+          softMask(
+            maskUV.y,
+            0.00,
+            0.44
+          )
+        );
+
+      darkRightEdge +=
+        sin(
+          maskUV.y * 6.0 + 0.4
+        ) *
+        0.010;
+
+      float darkHorizontal =
+        1.0 -
+        softMask(
+          maskUV.x,
+          darkRightEdge - 0.010,
+          darkRightEdge + 0.012
+        );
+
+      float darkVertical =
+        1.0 -
+        softMask(
+          maskUV.y +
+          maskUV.x * 0.18,
+          0.405,
+          0.435
+        );
+
+      float darkShape =
+        clamp(
+          darkHorizontal *
+          darkVertical,
+          0.0,
+          1.0
+        );
+
+      /*
+        Magenta territory is the left/middle complement of cobalt,
+        excluding the strongest dark territory.
+      */
+      float magentaShape =
+        clamp(
+          (
+            1.0 -
+            blueShape * 0.98
+          ) *
+          (
+            1.0 -
+            darkShape * 0.82
+          ),
+          0.0,
+          1.0
+        );
+
+      float motion =
+        reducedMotionPlaceholder; // replaced in JS before compilation
+
+      /*
+        Stage 3.4: apply a DIFFERENT corner-pin transform to each approved
+        Stage 2 colour duplicate.
+
+        Red leans into the left-side V / funnel.
+        Blue opens more aggressively toward the right.
+        Violet sits between them as a softer support plane.
+      */
+      vec2 redUV =
+        cornerPinApprox(
+          uv,
+          0.055,
+          -0.105,
+          0.88,
+          1.18
+        );
+
+      redUV =
+        funhouseRight(
+          redUV,
+          0.8,
+          motion
+        );
+
+      redUV =
+        rippleLayer(
+          redUV,
+          0.8,
+          0.011,
+          motion
+        );
+
+      vec2 blueUV =
+        cornerPinApprox(
+          uv,
+          -0.035,
+          0.115,
+          1.16,
+          0.86
+        );
+
+      blueUV =
+        funhouseRight(
+          blueUV,
+          2.4,
+          motion
+        );
+
+      /*
+        Blue keeps only a small fine ripple after the broad mirror warp.
+      */
+      blueUV.x +=
+        sin(
+          blueUV.y * 17.0 -
+          motion * 1.55 +
+          2.4
+        ) * 0.0032;
+
+      vec2 violetUV =
+        cornerPinApprox(
+          uv,
+          0.020,
+          -0.028,
+          0.98,
+          1.08
+        );
+
+      violetUV =
+        funhouseRight(
+          violetUV,
+          4.1,
+          motion
+        );
+
+      violetUV =
+        rippleLayer(
+          violetUV,
+          4.1,
+          0.0065,
+          motion
+        );
+
+      float redStripe =
+        stripeField(
+          redUV.x - 0.018,
+          motion + 0.018
+        );
+
+      float blueStripe =
+        stripeField(
+          blueUV.x + 0.026,
+          motion - 0.024
+        );
+
+      float supportStripe =
+        stripeField(
+          violetUV.x + 0.004,
+          motion + 0.055
+        );
+
+      /*
+        ALTERNATE MAGENTA DUPLICATE FAMILY
+        -----------------------------------
+        Same source animation, but different corner pin, ripple and phase.
+        These are only revealed inside the fixed magenta territory.
+      */
+      vec2 magentaRedUV =
+        cornerPinApprox(
+          uv,
+          0.095,
+          -0.135,
+          0.80,
+          1.30
+        );
+
+      magentaRedUV =
+        rippleLayer(
+          magentaRedUV,
+          1.55,
+          0.017,
+          motion * 1.06
+        );
+
+      vec2 magentaVioletUV =
+        cornerPinApprox(
+          uv,
+          0.060,
+          -0.075,
+          0.90,
+          1.18
+        );
+
+      magentaVioletUV =
+        rippleLayer(
+          magentaVioletUV,
+          3.25,
+          0.010,
+          motion * 0.92
+        );
+
+      float magentaRedStripe =
+        stripeField(
+          magentaRedUV.x - 0.030,
+          motion + 0.105
+        );
+
+      float magentaVioletStripe =
+        stripeField(
+          magentaVioletUV.x + 0.012,
+          motion - 0.082
+        );
+
+      vec3 magentaRedLayer =
+        magentaRedStripe *
+        vec3(
+          1.00,
+          0.035,
+          0.42
+        );
+
+      vec3 magentaVioletLayer =
+        magentaVioletStripe *
+        vec3(
+          0.62,
+          0.07,
+          0.90
+        ) *
+        0.66;
+
+      /*
+        ALTERNATE COBALT DUPLICATE FAMILY
+        ----------------------------------
+        Different pin / mirror warp / phase so ribbons visibly refract
+        when they enter the persistent cobalt territory.
+      */
+      vec2 cobaltBlueUV =
+        cornerPinApprox(
+          uv,
+          -0.085,
+          0.155,
+          1.30,
+          0.76
+        );
+
+      cobaltBlueUV =
+        funhouseRight(
+          cobaltBlueUV,
+          5.35,
+          motion * 0.94
+        );
+
+      cobaltBlueUV.x +=
+        sin(
+          cobaltBlueUV.y * 19.0 -
+          motion * 1.38 +
+          1.1
+        ) *
+        0.0055;
+
+      vec2 cobaltVioletUV =
+        cornerPinApprox(
+          uv,
+          -0.030,
+          0.070,
+          1.18,
+          0.88
+        );
+
+      cobaltVioletUV =
+        rippleLayer(
+          cobaltVioletUV,
+          5.9,
+          0.0085,
+          motion * 1.02
+        );
+
+      float cobaltBlueStripe =
+        stripeField(
+          cobaltBlueUV.x + 0.040,
+          motion - 0.118
+        );
+
+      float cobaltVioletStripe =
+        stripeField(
+          cobaltVioletUV.x - 0.008,
+          motion + 0.088
+        );
+
+      vec3 cobaltBlueLayer =
+        cobaltBlueStripe *
+        vec3(
+          0.020,
+          0.28,
+          1.00
+        );
+
+      vec3 cobaltVioletLayer =
+        cobaltVioletStripe *
+        vec3(
+          0.34,
+          0.08,
+          1.00
+        ) *
+        0.62;
+
+      vec3 redLayer =
+        redStripe *
+        vec3(
+          1.00,
+          0.045,
+          0.27
+        );
+
+      vec3 blueLayer =
+        blueStripe *
+        vec3(
+          0.035,
+          0.23,
+          1.00
+        );
+
+      vec3 violetLayer =
+        supportStripe *
+        vec3(
+          0.46,
+          0.08,
+          0.78
+        ) *
+        0.58;
+
+      /*
+        Flatter runner duplicate. Unlike the large fanned copies, this
+        layer keeps a regular diagonal rhythm and simply travels leftward.
+        A cool tint lets it read as a distinct plane while Lighten keeps
+        the intersections luminous.
+      */
+      float runnerStripe =
+        runnerStripeField(
+          uv,
+          motion,
+          0.72
+        );
+
+      /*
+        Stage 3.4 colour rebalance:
+        preserve the runner geometry exactly, but stop the upper planes
+        from collapsing the whole frame into blue. The clean runner shifts
+        from magenta on the left toward electric blue on the right.
+      */
+      float runnerColourMix =
+        smoothstep(
+          0.24,
+          0.82,
+          uv.x
+        );
+
+      vec3 runnerTint =
+        mix(
+          vec3(
+            1.00,
+            0.07,
+            0.40
+          ),
+          vec3(
+            0.06,
+            0.34,
+            1.00
+          ),
+          runnerColourMix
+        );
+
+      vec3 runnerLayer =
+        runnerStripe *
+        runnerTint *
+        0.91;
+
+      float rippledRunnerStripe =
+        rippledRunnerStripeField(
+          uv,
+          motion,
+          2.35
+        );
+
+      /*
+        Keep the fast runner hotter / more magenta so it counterbalances
+        the clean blue runner without changing its motion at all.
+      */
+      vec3 rippledRunnerTint =
+        mix(
+          vec3(
+            1.00,
+            0.045,
+            0.30
+          ),
+          vec3(
+            0.62,
+            0.10,
+            1.00
+          ),
+          smoothstep(
+            0.42,
+            0.92,
+            uv.x
+          )
+        );
+
+      vec3 rippledRunnerLayer =
+        rippledRunnerStripe *
+        rippledRunnerTint *
+        0.72;
+
+      /*
+        The upper runner planes obscure the underlying convergence point
+        across the left/centre instead of letting the base fan dominate.
+      */
+      float runnerCoverZone =
+        1.0 -
+        smoothstep(
+          0.50,
+          0.78,
+          uv.x
+        );
+
+      float baseVisibility =
+        mix(
+          1.0,
+          0.54,
+          runnerCoverZone
+        );
+
+      redLayer *= baseVisibility;
+      blueLayer *= baseVisibility;
+      violetLayer *= baseVisibility;
+
+      magentaRedLayer *=
+        baseVisibility;
+
+      magentaVioletLayer *=
+        baseVisibility;
+
+      cobaltBlueLayer *=
+        baseVisibility;
+
+      cobaltVioletLayer *=
+        baseVisibility;
+
+      /*
+        GEOMETRY SWAP INSIDE PERSISTENT TERRITORIES
+        --------------------------------------------
+        Outside the shapes, normal Stage 3 layers remain untouched.
+        Inside, alternate warped duplicates replace the relevant family.
+
+        This means a ribbon crossing a boundary changes phase/angle/warp
+        rather than merely changing grade.
+      */
+      float magentaSwap =
+        smoothstep(
+          0.46,
+          0.54,
+          magentaShape
+        );
+
+      float cobaltSwap =
+        smoothstep(
+          0.46,
+          0.54,
+          blueShape
+        );
+
+      vec3 regionRedLayer =
+        mix(
+          redLayer,
+          magentaRedLayer,
+          magentaSwap
+        );
+
+      vec3 regionBlueLayer =
+        mix(
+          blueLayer,
+          cobaltBlueLayer,
+          cobaltSwap
+        );
+
+      vec3 regionVioletLayer =
+        violetLayer;
+
+      regionVioletLayer =
+        mix(
+          regionVioletLayer,
+          magentaVioletLayer,
+          magentaSwap * 0.76
+        );
+
+      regionVioletLayer =
+        mix(
+          regionVioletLayer,
+          cobaltVioletLayer,
+          cobaltSwap * 0.82
+        );
+
+      /*
+        DARK-ZONE STRUCTURAL RUNNER
+        --------------------------------
+        In the original, the upper-left /// system reads more like dark
+        structural bands than bright coloured strips.
+
+        So inside the fixed dark territory:
+        - the clean runner becomes a CUT through the base colour stack
+        - the clean runner itself contributes almost no bright colour
+        - the fast rippled runner is still allowed to leak some chromatic
+          fragments across the shadow
+      */
+      float hardDarkShape =
+        smoothstep(
+          0.48,
+          0.56,
+          darkShape
+        );
+
+      float darkBaseWeight =
+        mix(
+          1.0,
+          0.34,
+          hardDarkShape
+        );
+
+      regionRedLayer *=
+        darkBaseWeight;
+
+      regionBlueLayer *=
+        darkBaseWeight;
+
+      regionVioletLayer *=
+        darkBaseWeight;
+
+      /*
+        Clean runner becomes negative-space structure inside the dark zone.
+        Wherever its stripe mask exists, it suppresses the base geometry.
+      */
+      float darkRunnerCut =
+        runnerStripe *
+        hardDarkShape;
+
+      float runnerCutWeight =
+        1.0 -
+        darkRunnerCut * 0.88;
+
+      regionRedLayer *=
+        runnerCutWeight;
+
+      regionBlueLayer *=
+        runnerCutWeight;
+
+      regionVioletLayer *=
+        runnerCutWeight;
+
+      /*
+        Do not paint a bright runner back into the cut.
+        Outside the dark zone it remains exactly the approved Stage 3
+        coloured runner.
+      */
+      runnerLayer *=
+        mix(
+          1.0,
+          0.08,
+          hardDarkShape
+        );
+
+      /*
+        Fast runner remains the chromatic interruption layer.
+      */
+      rippledRunnerLayer *=
+        mix(
+          1.0,
+          0.52,
+          hardDarkShape
+        );
+
+      /*
+        AE-style Lighten approximation:
+        each output channel keeps the brighter value from the duplicates.
+        Where red and blue overlap, both channels survive and naturally
+        create hot magenta / violet mixtures.
+      */
+      vec3 color =
+        max(
+          max(
+            max(
+              max(
+                regionRedLayer,
+                regionBlueLayer
+              ),
+              regionVioletLayer
+            ),
+            runnerLayer
+          ),
+          rippledRunnerLayer
+        );
+
+      outColor =
+        vec4(color, 1.0);
+    }
+  `;
+
+  function compile(type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      const log = gl.getShaderInfoLog(shader);
+      gl.deleteShader(shader);
+      throw new Error(log || "Shader compilation failed.");
+    }
+
+    return shader;
+  }
+
+  const resolvedFragmentSource =
+    fragmentSource.replace(
+      "reducedMotionPlaceholder",
+      reducedMotion
+        ? "0.0"
+        : "u_motion"
+    );
+
+  let program;
+
+  try {
+    program = gl.createProgram();
+
+    gl.attachShader(
+      program,
+      compile(
+        gl.VERTEX_SHADER,
+        vertexSource
+      )
+    );
+
+    gl.attachShader(
+      program,
+      compile(
+        gl.FRAGMENT_SHADER,
+        resolvedFragmentSource
+      )
+    );
+
+    gl.linkProgram(program);
+
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      throw new Error(
+        gl.getProgramInfoLog(program) ||
+        "Program link failed."
+      );
+    }
+  } catch (error) {
+    console.warn(
+      "[JOYCE AE reconstruction / Stage 3] WebGL failed:",
+      error
+    );
+    return;
+  }
+
+  gl.useProgram(program);
+
+  const positionLocation =
+    gl.getAttribLocation(
+      program,
+      "a_position"
+    );
+
+  const buffer =
+    gl.createBuffer();
+
+  gl.bindBuffer(
+    gl.ARRAY_BUFFER,
+    buffer
+  );
+
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array([
+      -1, -1,
+       1, -1,
+      -1,  1,
+      -1,  1,
+       1, -1,
+       1,  1
+    ]),
+    gl.STATIC_DRAW
+  );
+
+  gl.enableVertexAttribArray(
+    positionLocation
+  );
+
+  gl.vertexAttribPointer(
+    positionLocation,
+    2,
+    gl.FLOAT,
+    false,
+    0,
+    0
+  );
+
+  const uResolution =
+    gl.getUniformLocation(
+      program,
+      "u_resolution"
+    );
+
+  const uTime =
+    gl.getUniformLocation(
+      program,
+      "u_time"
+    );
+
+  const uMotion =
+    gl.getUniformLocation(
+      program,
+      "u_motion"
+    );
+
+  const uZoomMode =
+    gl.getUniformLocation(
+      program,
+      "u_zoomMode"
+    );
+
+  function resize() {
+    /*
+      Stage 3 is trivial enough that 1.5 DPR gives a clean preview while
+      staying conservative on the same machine that exposed V30's cost.
+    */
+    const dpr =
+      Math.min(
+        window.devicePixelRatio || 1,
+        1.5
+      );
+
+    const width =
+      Math.max(
+        1,
+        Math.round(
+          window.innerWidth * dpr
+        )
+      );
+
+    const height =
+      Math.max(
+        1,
+        Math.round(
+          window.innerHeight * dpr
+        )
+      );
+
+    if (
+      canvas.width !== width ||
+      canvas.height !== height
+    ) {
+      canvas.width = width;
+      canvas.height = height;
+
+      gl.viewport(
+        0,
+        0,
+        width,
+        height
+      );
+    }
+  }
+
+  window.addEventListener(
+    "resize",
+    resize,
+    { passive: true }
+  );
+
+  resize();
+
+  const start =
+    performance.now();
+
+  let visible = true;
+
+  const observer =
+    new IntersectionObserver(
+      entries => {
+        visible =
+          Boolean(
+            entries[0] &&
+            entries[0].isIntersecting
+          );
+      },
+      {
+        threshold: 0.01
+      }
+    );
+
+  observer.observe(root);
+
+  function frame(now) {
+    requestAnimationFrame(frame);
+
+    if (!visible) return;
+
+    resize();
+
+    const elapsed =
+      (now - start) / 1000;
+
+    /*
+      Positive motion makes the stripe bands expand outward from the
+      approved off-axis origin; Stage 3 then fans each coloured duplicate
+      through its own corner-pin transform.
+    */
+    const motion =
+      elapsed * 0.72;
+
+    gl.useProgram(program);
+
+    gl.uniform2f(
+      uResolution,
+      canvas.width,
+      canvas.height
+    );
+
+    gl.uniform1f(
+      uTime,
+      elapsed
+    );
+
+    if (uMotion) {
+      gl.uniform1f(
+        uMotion,
+        motion
+      );
+    }
+
+    if (uZoomMode) {
+      gl.uniform1f(
+        uZoomMode,
+        zoomMode
+      );
+    }
+
+    gl.drawArrays(
+      gl.TRIANGLES,
+      0,
+      6
+    );
+  }
+
+  requestAnimationFrame(frame);
+})();
