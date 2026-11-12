@@ -44,122 +44,6 @@
     in vec2 a_position;
     out vec2 v_uv;
 
-    float leftSlashBars(
-      vec2 uv,
-      float motion,
-      float phase
-    ) {
-      /*
-        /// family moving <<.
-        Positive time advances the bands toward the left.
-      */
-      float coord =
-        (
-          uv.x -
-          uv.y * 0.34
-        ) * 6.10 +
-        motion * 1.08 +
-        phase;
-
-      float cell =
-        fract(coord);
-
-      return
-        smoothstep(
-          0.07,
-          0.09,
-          cell
-        ) *
-        (
-          1.0 -
-          smoothstep(
-            0.56,
-            0.59,
-            cell
-          )
-        );
-    }
-
-    float syncedFunhouseRipple(
-      vec2 uv,
-      float motion,
-      float phase
-    ) {
-      /*
-        Phase-locked funhouse distortion of the black /// runner.
-
-        Same timing, but the sampling geometry pinches / bulges row by row
-        so the runner and ripple can visually morph into one another.
-      */
-      vec2 q = uv;
-
-      float leftWeight =
-        1.0 -
-        smoothstep(
-          0.30,
-          0.80,
-          uv.x
-        );
-
-      float rowMagnification =
-        1.0 +
-        leftWeight *
-        (
-          sin(
-            uv.y * 5.6 -
-            motion * 1.34 +
-            phase
-          ) * 0.32 +
-          sin(
-            uv.y * 11.2 +
-            motion * 0.76 +
-            phase * 1.65
-          ) * 0.12
-        );
-
-      rowMagnification =
-        clamp(
-          rowMagnification,
-          0.68,
-          1.38
-        );
-
-      const float pivotX = 0.18;
-
-      q.x =
-        pivotX +
-        (
-          q.x -
-          pivotX
-        ) /
-        rowMagnification;
-
-      q.x +=
-        sin(
-          uv.y * 17.0 -
-          motion * 2.02 +
-          phase
-        ) *
-        0.022 *
-        leftWeight;
-
-      q.x +=
-        sin(
-          uv.y * 31.0 +
-          motion * 1.14 +
-          phase * 1.8
-        ) *
-        0.008 *
-        leftWeight;
-
-      return
-        leftSlashBars(
-          q,
-          motion,
-          phase
-        );
-    }
-
     void main() {
       v_uv = a_position * 0.5 + 0.5;
       gl_Position = vec4(a_position, 0.0, 1.0);
@@ -454,6 +338,122 @@
             0.49,
             cell
           )
+        );
+    }
+
+    float leftSlashBars(
+      vec2 uv,
+      float motion,
+      float phase
+    ) {
+      /*
+        /// family moving <<.
+        Positive time advances the bands toward the left.
+      */
+      float coord =
+        (
+          uv.x -
+          uv.y * 0.34
+        ) * 6.10 +
+        motion * 1.08 +
+        phase;
+
+      float cell =
+        fract(coord);
+
+      return
+        smoothstep(
+          0.07,
+          0.09,
+          cell
+        ) *
+        (
+          1.0 -
+          smoothstep(
+            0.56,
+            0.59,
+            cell
+          )
+        );
+    }
+
+    float syncedFunhouseRipple(
+      vec2 uv,
+      float motion,
+      float phase
+    ) {
+      /*
+        Phase-locked funhouse distortion of the black /// runner.
+
+        Same timing, but the sampling geometry pinches / bulges row by row
+        so the runner and ripple can visually morph into one another.
+      */
+      vec2 q = uv;
+
+      float leftWeight =
+        1.0 -
+        smoothstep(
+          0.30,
+          0.80,
+          uv.x
+        );
+
+      float rowMagnification =
+        1.0 +
+        leftWeight *
+        (
+          sin(
+            uv.y * 5.6 -
+            motion * 1.34 +
+            phase
+          ) * 0.32 +
+          sin(
+            uv.y * 11.2 +
+            motion * 0.76 +
+            phase * 1.65
+          ) * 0.12
+        );
+
+      rowMagnification =
+        clamp(
+          rowMagnification,
+          0.68,
+          1.38
+        );
+
+      const float pivotX = 0.18;
+
+      q.x =
+        pivotX +
+        (
+          q.x -
+          pivotX
+        ) /
+        rowMagnification;
+
+      q.x +=
+        sin(
+          uv.y * 17.0 -
+          motion * 2.02 +
+          phase
+        ) *
+        0.022 *
+        leftWeight;
+
+      q.x +=
+        sin(
+          uv.y * 31.0 +
+          motion * 1.14 +
+          phase * 1.8
+        ) *
+        0.008 *
+        leftWeight;
+
+      return
+        leftSlashBars(
+          q,
+          motion,
+          phase
         );
     }
 
